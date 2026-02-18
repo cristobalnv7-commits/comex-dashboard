@@ -1,0 +1,4372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="COMEX">
+    <meta name="theme-color" content="#E31E24">
+    <link rel="manifest" href="data:application/json,{%22name%22:%22Dashboard%20COMEX%22,%22short_name%22:%22COMEX%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23E31E24%22,%22theme_color%22:%22%23E31E24%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E31E24'/><text y='.9em' font-size='80' x='10'>📦</text></svg>%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
+    <title>Dashboard COMEX - Importaciones</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #E31E24 0%, #B71C1C 100%);
+            padding: 20px;
+            padding-bottom: 100px;
+            min-height: 100vh;
+            /* soporte notch iOS */
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header img {
+            filter: brightness(1.1);
+        }
+
+                .header h1 {
+            font-size: 32px;
+            color: #E31E24;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .header-date {
+            text-align: right;
+            color: #666;
+        }
+
+        .header-date strong {
+            display: block;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+
+        .kpi-subtitle {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .kpi-card.danger .kpi-value { color: #ef4444; }
+        .kpi-card.warning .kpi-value { color: #f59e0b; }
+        .kpi-card.success .kpi-value { color: #10b981; }
+        .kpi-card.info .kpi-value { color: #3b82f6; }
+        .kpi-card.purple .kpi-value { color: #E31E24; }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+
+        .filters-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 10px 14px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-reset {
+            padding: 10px 20px;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .table-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+            overflow-x: auto;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-header h3 {
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.danger {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge.success {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .badge.warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge.info {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .record-count {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: middle;
+        }
+
+        tbody tr {
+            transition: background-color 0.15s;
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-dot.danger { background: #ef4444; }
+        .status-dot.success { background: #10b981; }
+        .status-dot.warning { background: #f59e0b; }
+
+        .highlight-col {
+            background: #eff6ff !important;
+            font-weight: 600;
+        }
+
+        .critical-col {
+            background: #fef3c7 !important;
+            font-weight: 600;
+        }
+
+        .deviation-positive {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .deviation-neutral {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .deviation-negative {
+            color: #6b7280;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-bottom: 90px;
+            }
+
+            .header {
+                padding: 16px;
+                margin-bottom: 15px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .header-date {
+                text-align: center;
+                font-size: 12px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            .kpi-card {
+                padding: 16px;
+            }
+
+            .kpi-value {
+                font-size: 30px;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-bottom: 15px;
+            }
+
+            .chart-card {
+                padding: 16px;
+            }
+
+            .filters {
+                padding: 14px;
+                margin-bottom: 15px;
+            }
+
+            .filters-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .filter-group {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .filter-group select,
+            .filter-group input {
+                font-size: 16px; /* evita zoom en iOS */
+                padding: 12px 14px;
+            }
+
+            .btn-reset {
+                width: 100%;
+                padding: 12px;
+                font-size: 15px;
+            }
+
+            .table-card {
+                padding: 14px 10px;
+                margin-bottom: 15px;
+                border-radius: 10px;
+            }
+
+            .table-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .table-header h3 {
+                font-size: 15px;
+            }
+
+            table {
+                font-size: 12px;
+                min-width: 600px;
+            }
+
+            th, td {
+                padding: 10px 8px;
+            }
+
+            /* Scroll horizontal suave en tablas */
+            .table-card {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Botones flotantes más bajos para no tapar contenido */
+            .print-button {
+                bottom: 20px;
+                right: 20px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            .upload-container {
+                bottom: 20px;
+                right: 80px;
+            }
+
+            .upload-container label {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .kpi-value {
+                font-size: 26px;
+            }
+
+            .kpi-label {
+                font-size: 11px;
+            }
+        }
+
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #1f2937;
+            color: white;
+            font-size: 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+
+        /* Estilos de impresión profesionales */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0;
+                margin: 0;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .header {
+                background: white !important;
+                border: 2px solid #E31E24;
+                page-break-after: avoid;
+                margin-bottom: 15px;
+                padding: 20px;
+            }
+
+            .header-content {
+                flex-direction: row !important;
+            }
+
+            .kpi-grid {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 10px;
+                page-break-inside: avoid;
+                margin-bottom: 15px;
+            }
+
+            .kpi-card {
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                border: 1px solid #e5e7eb;
+                page-break-inside: avoid;
+                padding: 15px;
+            }
+
+            .kpi-card:hover {
+                transform: none !important;
+            }
+
+            .charts-section {
+                display: none !important; /* Ocultar gráficos en impresión */
+            }
+
+            .filters {
+                display: none !important; /* Ocultar filtros en impresión */
+            }
+
+            .table-card {
+                page-break-inside: avoid;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                border: 1px solid #e5e7eb;
+                margin-bottom: 20px;
+                padding: 15px;
+            }
+
+            .table-card h3 {
+                color: #E31E24 !important;
+                font-size: 16px;
+            }
+
+            table {
+                font-size: 10px !important;
+                page-break-inside: auto;
+            }
+
+            thead {
+                background: #f9fafb !important;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            tbody tr:hover {
+                background: transparent !important;
+            }
+
+            .badge {
+                border: 1px solid currentColor;
+                padding: 3px 8px;
+                font-size: 9px;
+            }
+
+            .highlight-col {
+                background: #eff6ff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .critical-col {
+                background: #fef3c7 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .deviation-positive {
+                color: #dc2626 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .deviation-neutral {
+                color: #059669 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Asegurar que los colores se impriman */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Pie de página con fecha */
+            @page {
+                margin: 1.5cm;
+                @bottom-right {
+                    content: "Página " counter(page) " de " counter(pages);
+                }
+            }
+
+            /* Agregar fecha de impresión */
+            .header::after {
+                content: "Impreso: " attr(data-print-date);
+                display: block;
+                font-size: 10px;
+                color: #666;
+                margin-top: 10px;
+                text-align: right;
+            }
+        }
+
+        /* Botón de impresión */
+        .print-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #E31E24;
+            color: white;
+            border: none;
+            width: 56px;
+            height: 56px;
+            border-radius: 50px;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(227, 30, 36, 0.4);
+            z-index: 1000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .print-button:hover {
+            background: #B71C1C;
+            box-shadow: 0 6px 20px rgba(227, 30, 36, 0.6);
+            transform: translateY(-2px);
+        }
+
+        @media print {
+            .print-button {
+                display: none !important;
+            }
+        }
+
+        /* Modal para detalle de items */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #E31E24 0%, #B71C1C 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+
+        .close:hover {
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            padding: 25px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .oc-info {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .oc-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .oc-info-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .oc-info-value {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .items-table thead {
+            background: #E31E24;
+            color: white;
+        }
+
+        .items-table th {
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .items-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+
+        .items-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .items-table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .clickable-oc {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clickable-oc:hover {
+            background: #e0f2fe !important;
+            transform: scale(1.01);
+        }
+
+
+        /* Botón de carga de archivo */
+        .upload-container {
+            position: fixed;
+            bottom: 30px;
+            right: 96px;
+            z-index: 1000;
+        }
+
+        .upload-container label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #E31E24;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50px;
+            font-size: 22px;
+            box-shadow: 0 4px 15px rgba(227, 30, 36, 0.4);
+            transition: all 0.3s;
+        }
+
+        .upload-container label:hover {
+            background: #B71C1C;
+            box-shadow: 0 6px 20px rgba(227, 30, 36, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .upload-container input[type="file"] {
+            display: none;
+        }
+
+        .upload-status {
+            display: none;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #E31E24;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media print {
+            .upload-container {
+                display: none !important;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script></head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAUDBAgGCAgGCAgGCAYGBwYIBwcHBwgICAkICAgGCAYICAgIChALCAgOCQgIDRUNDhERExMTCAsWGBYSGBASExIBBQUFBwYHDwgIDxgVEhUdHxgdGBcYFR0XFxYYFhcVFRcYFRUXFxUVGBcXFRcdFRYXFRcVFRYVFxUVFxUVFRUVFf/AABEIAtAFAAMBIgACEQEDEQH/xAAcAAEAAwADAQEAAAAAAAAAAAAABgcIAQQFAwL/xABVEAEAAgEDAAUECgwMBAUEAwAAAQIDBAURBgcSITEIE0FRFBciNWFxdHWBszI0UlNzgpGTlLGy0xUjMzZCYnKSobS10mWD0dRDVGOiwxhEVcEkJoT/xAAcAQEAAgMBAQEAAAAAAAAAAAAABQcDBAYCAQj/xABAEQEAAQMBBAQKCQMEAgMAAAAAAQIDBBEFBiExEkFRcRQyMzVhcoGRobETFiI0krLB0eFSgvAVQlNiI8IkouL/2gAMAwEAAhEDEQA/AKvAck/SoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/9k=" alt="Serviall" style="height: 60px; object-fit: contain;">
+                    <div>
+                        <h1>🚢 Dashboard COMEX - Importaciones</h1>
+                        <p class="header-subtitle">Control de Lead Time, DIFOT y Cumplimiento (ETA + 8 días de liberación)</p>
+                    </div>
+                </div><div class="header-date">
+                    <strong>16 de Febrero 2026</strong>
+                    <p>Reporte actualizado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+            <div class="kpi-card danger" onclick="filterByStatus('atrasado')">
+                <div class="kpi-label">Atrasados</div>
+                <div class="kpi-value" id="kpi-atrasados">-</div>
+                <div class="kpi-subtitle">ETA vencida</div>
+            </div>
+
+            <div class="kpi-card warning" onclick="filterByStatus('proximo')">
+                <div class="kpi-label">Próximos 7 días</div>
+                <div class="kpi-value" id="kpi-proximos">-</div>
+                <div class="kpi-subtitle">Preparar recepción</div>
+            </div>
+
+            <div class="kpi-card success" onclick="filterByStatus('en_tiempo')">
+                <div class="kpi-label">En tiempo</div>
+                <div class="kpi-value" id="kpi-en-tiempo">-</div>
+                <div class="kpi-subtitle">Sin alertas</div>
+            </div>
+
+            <div class="kpi-card info" onclick="filterByStatus('sin_eta')">
+                <div class="kpi-label">En Preparación</div>
+                <div class="kpi-value" id="kpi-sin-eta">-</div>
+                <div class="kpi-subtitle">Sin ETA confirmada</div>
+            </div>
+
+            <div class="kpi-card purple">
+                <div class="kpi-label">DIFOT</div>
+                <div class="kpi-value" id="kpi-difot">-%</div>
+                <div class="kpi-subtitle">Cumplimiento general</div>
+            </div>
+
+            <div class="kpi-card danger">
+                <div class="kpi-label">Desviación Prom.</div>
+                <div class="kpi-value" id="kpi-desviacion">-</div>
+                <div class="kpi-subtitle">días de retraso</div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <h3>📊 Estado de Órdenes de Compra</h3>
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>📈 DIFOT - Cumplimiento por Estado</h3>
+                <canvas id="difotChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <!-- Banner datos guardados -->
+        <div id="savedDataBanner" style="display:none; background:#d1fae5; color:#065f46; padding:10px 20px; border-radius:10px; margin-bottom:15px; font-size:13px; font-weight:600; text-align:center;"></div>
+
+        <div class="filters">
+            <div class="filters-content">
+                <div class="filter-group">
+                    <label>Estado</label>
+                    <select id="filterStatus" onchange="applyFilters()">
+                        <option value="">Todos</option>
+                        <option value="atrasado">Atrasados</option>
+                        <option value="proximo">Próximos 7 días</option>
+                        <option value="en_tiempo">En tiempo</option>
+                        <option value="sin_eta">En preparación</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Proveedor</label>
+                    <select id="filterProveedor" onchange="applyFilters()"></select>
+                </div>
+                <div class="filter-group">
+                    <label>Transporte</label>
+                    <select id="filterTransporte" onchange="applyFilters()">
+                        <option value="">Todos</option>
+                        <option value="Marítimo">Marítimo</option>
+                        <option value="Aéreo">Aéreo</option>
+                        <option value="Sin Información">Sin Información</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Buscar OC</label>
+                    <input type="text" id="searchOC" placeholder="Número de OC..." onkeyup="applyFilters()">
+                </div>
+                <div class="filter-group">
+                    <label>Buscar SKU</label>
+                    <input type="text" id="searchSKU" placeholder="Código SKU..." onkeyup="applyFilters()">
+                </div>
+                <button class="btn-reset" onclick="resetFilters()">Limpiar filtros</button>
+            </div>
+        </div>
+
+        <!-- Tablas -->
+        <div id="tablesContainer"></div>
+
+        <!-- Botón de impresión flotante -->
+        <button class="print-button" onclick="window.print()" title="Imprimir / Guardar PDF">
+            🖨️
+        </button>
+    </div>
+
+    <script>
+        // Dashboard COMEX - Con detalle de items clickeable
+        const dashboardData = {
+  "kpis": {
+    "total_ocs": 51,
+    "sin_eta": 37,
+    "atrasados": 0,
+    "proximos_7d": 5,
+    "en_tiempo": 9,
+    "con_desviacion": 1,
+    "sin_desviacion": 13,
+    "desviacion_promedio": 10.0
+  },
+  "atrasados": [],
+  "proximos": [
+    {
+      "Num_OC": 10064295,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-01-02",
+      "Fecha_Comprometida": "2026-02-20",
+      "Fecha_ETA": "2026-02-16",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 49,
+      "LT_Real": 45.0,
+      "Desviacion": -4.0,
+      "Dias_hasta_comprometida": 4,
+      "Dias_hasta_ETA": 0.0,
+      "Estado_Calculado": "Pr\u00f3ximo 7 d\u00edas",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10023825,
+          "Descripcion": "HRB 10 CURVADORA HIDRAULICA METALLKRAFT",
+          "Cantidad": 1,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065293,
+      "Proveedor": "Ferramentas Gedore do Brasil Ltda.",
+      "Marca": "GEDORE AL",
+      "Fecha_OC": "2026-02-03",
+      "Fecha_Comprometida": "2026-03-13",
+      "Fecha_ETA": "2026-02-18",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 38,
+      "LT_Real": 15.0,
+      "Desviacion": -23.0,
+      "Dias_hasta_comprometida": 25,
+      "Dias_hasta_ETA": 2.0,
+      "Estado_Calculado": "Pr\u00f3ximo 7 d\u00edas",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10018546,
+          "Descripcion": "R61003114 GED. AL. JGO. DADOS HEX. LARGOS CUAD. 1/2\" DE 10 A 32MM 14PCS. GEDORE",
+          "Cantidad": 22,
+          "Marca": "GEDORE AL"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065113,
+      "Proveedor": "Ferramentas Gedore do Brasil Ltda.",
+      "Marca": "GEDORE AL",
+      "Fecha_OC": "2026-01-27",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": "2026-02-18",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 86,
+      "LT_Real": 22.0,
+      "Desviacion": -64.0,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": 2.0,
+      "Estado_Calculado": "Pr\u00f3ximo 7 d\u00edas",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 11,
+      "Items": [
+        {
+          "SKU": 10006521,
+          "Descripcion": "8867930 AL. MARTILLO ANTIREBOTE C/MANGO FIBRA 45MM GEDORE AL",
+          "Cantidad": 2,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10008069,
+          "Descripcion": "2641259 AL LLAVE DE TORQUE MANUAL CUAD. 1/2\" (60-300 Nm) GEDORE AL",
+          "Cantidad": 4,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10011339,
+          "Descripcion": "6759700 AL EXTRACTOR DE PERNOS JGO.(M3-M24) GEDORE AL",
+          "Cantidad": 14,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10011922,
+          "Descripcion": "3300826 GED.RED. JUEGO DE BOTADORES COMBINADOS (6PCS) GEDORE AL",
+          "Cantidad": 13,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10012381,
+          "Descripcion": "3300824 GED.RED. JUEGO BOTADORES CILINDRICOS 3-10MM (6PCS) GEDORE AL",
+          "Cantidad": 12,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10019934,
+          "Descripcion": "1955551 AL JUEGO DE ALICATE DE PRECISION DE 6PZ. GEDORE AL",
+          "Cantidad": 15,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10021457,
+          "Descripcion": "6675280 AL ADAPTADOR DE IMP. DE 3/4\" X 1/2\" GEDORE",
+          "Cantidad": 18,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10021466,
+          "Descripcion": "6657890 AL ADAPTADOR DE\u00a0IMP.DE\u00a01\" A 1.1/2\" GEDORE",
+          "Cantidad": 4,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10022145,
+          "Descripcion": "3365202 AL  JUEGO DE LLAVES PUNTA Y CORONA 16 PZ 1/4\" A 1.1/4\" GEDORE AL",
+          "Cantidad": 4,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10044168,
+          "Descripcion": "3300055 GED.RED.JUEGO DE DADOS CUAD. 1/2'' 10 A 32MM 24PC. GEDORE AL",
+          "Cantidad": 59,
+          "Marca": "GEDORE AL"
+        },
+        {
+          "SKU": 10044171,
+          "Descripcion": "3300054 GED.RED. JUEGO DE DADOS CUAD.3/8'' DE 6 A 24MM 59PC GEDORE AL",
+          "Cantidad": 15,
+          "Marca": "GEDORE AL"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10062683,
+      "Proveedor": "21 CENTURY COLUMBUS INT'L TRADING CO.LTD",
+      "Marca": "VELKEN",
+      "Fecha_OC": "2025-11-03",
+      "Fecha_Comprometida": "2026-03-29",
+      "Fecha_ETA": "2026-02-23",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 146,
+      "LT_Real": 112.0,
+      "Desviacion": -34.0,
+      "Dias_hasta_comprometida": 41,
+      "Dias_hasta_ETA": 7.0,
+      "Estado_Calculado": "Pr\u00f3ximo 7 d\u00edas",
+      "Estado_OC": "4.Atrasado +14d",
+      "Lineas": 40,
+      "Items": [
+        {
+          "SKU": 10030184,
+          "Descripcion": "ESCOBILLA C/CERDAS DE ACERO C/MANGO MADERA 4 FILAS 28.5 X 3.6CM VELKEN",
+          "Cantidad": 2400,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030185,
+          "Descripcion": "ESCOBILLA C/CERDAS DE ACERO C/MANGO MADERA 6 FILAS 28.5 X 3.8CM VELKEN",
+          "Cantidad": 2400,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030186,
+          "Descripcion": "BROCHA PLANA DE 240MM X 60MM LONGITUD PELO 57MM VELKEN",
+          "Cantidad": 3600,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030187,
+          "Descripcion": "BROCHA PLANA DE 220MM X 35MM LONGITUD PELO 50MM VELKEN",
+          "Cantidad": 6000,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030188,
+          "Descripcion": "BROCHA PLANA DE 225MM X 45MM LONGITUD PELO 50MM VELKEN",
+          "Cantidad": 4800,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030189,
+          "Descripcion": "CUCHILLO RASPADOR 6 FILAS 28CM X 3 CM VELKEN",
+          "Cantidad": 1200,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030190,
+          "Descripcion": "BATERIA ALCALINA AA VELKEN",
+          "Cantidad": 50688,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030191,
+          "Descripcion": "BATERIA ALCALINA AAA VELKEN",
+          "Cantidad": 100224,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030197,
+          "Descripcion": "BATERIA PORTATIL CELULAR 5000MAH 6,5CM X 10.5CM C/LOGO VELKEN",
+          "Cantidad": 100,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030204,
+          "Descripcion": "LINTERNA 11X2.3CM VELKEN",
+          "Cantidad": 600,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030206,
+          "Descripcion": "LINTERNA 23X2.5CM VELKEN",
+          "Cantidad": 2000,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030214,
+          "Descripcion": "CINTA ADHESIVA TRANSPARENTE 48MM x 100M VELKEN",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030215,
+          "Descripcion": "CINTA ADHESIVA PAPEL MASKING 30MM x 40M VELKEN",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030216,
+          "Descripcion": "CINTA ADHESIVA PAPEL MASKING 48MM x 40M VELKEN",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030217,
+          "Descripcion": "CINTA DE TELA GRIS 48MM x 25M VELKEN",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030218,
+          "Descripcion": "CINTA ADHESIVA PAPEL KRAFT 48MM x 40M VELKEN",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030219,
+          "Descripcion": "AMARRACABLES BLANCAS 3.6 X 150MM",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030220,
+          "Descripcion": "AMARRACABLES BLANCAS 3.6 X 200MM",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030221,
+          "Descripcion": "AMARRACABLES BLANCAS 3.6 X 250MM",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030222,
+          "Descripcion": "AMARRACABLES BLANCAS 3.6 X 300MM",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030223,
+          "Descripcion": "AMARRACABLES BLANCAS 3.6 X 350MM",
+          "Cantidad": 1440,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10030192,
+          "Descripcion": "BATERIA PORTATIL CELULAR 5000MAH 6,5CM X 10.5CM C/LOGO SERVIALL",
+          "Cantidad": 200,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10030193,
+          "Descripcion": "BATERIA PORTATIL CELULAR 5000MAH 6,5CM X 10.5CM C/LOGO ALLIOT",
+          "Cantidad": 100,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10030194,
+          "Descripcion": "BATERIA PORTATIL CELULAR 5000MAH 6,5CM X 10.5CM C/LOGO FINNING",
+          "Cantidad": 100,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10030195,
+          "Descripcion": "BATERIA PORTATIL CELULAR 5000MAH 6,5CM X 10.5CM C/LOGO BHP",
+          "Cantidad": 100,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10030196,
+          "Descripcion": "BATERIA PORTATIL CELULAR 5000MAH 6,5CM X 10.5CM C/LOGO SIERRA GORDA",
+          "Cantidad": 100,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10030198,
+          "Descripcion": "CANDADO BLOQUEO 32MM",
+          "Cantidad": 1200,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030199,
+          "Descripcion": "CANDADO BLOQUEO 38MM",
+          "Cantidad": 1200,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030200,
+          "Descripcion": "CANDADO BLOQUEO 50MM",
+          "Cantidad": 600,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030201,
+          "Descripcion": "PANTALLA HOLOGRAFICA PUBLICITARIA 42CM",
+          "Cantidad": 3,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030202,
+          "Descripcion": "PANTALLA HOLOGRAFICA PUBLICITARIA 70CM + 180CM",
+          "Cantidad": 2,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030203,
+          "Descripcion": "PANTALLA HOLOGRAFICA PUBLICITARIA 35CM",
+          "Cantidad": 3,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030205,
+          "Descripcion": "LINTERNA 8X2.5CM",
+          "Cantidad": 1200,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030207,
+          "Descripcion": "LINTERNA TACTICA LED",
+          "Cantidad": 120,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030208,
+          "Descripcion": "MINI LINTERNA RECARGABLE USB LLAVERO DESTAPADOR 500LUM.",
+          "Cantidad": 2400,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030209,
+          "Descripcion": "ESCOBILLON INTERIOR MULTIUSO 120CM X 27CM",
+          "Cantidad": 500,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030210,
+          "Descripcion": "ESCOBILLON INTERIOR MULTIUSO 120CM X 35CM",
+          "Cantidad": 500,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030211,
+          "Descripcion": "CONJUNTO ESCOBILLON INTERIOR (25 X 85CM) Y PALA (24.5X25X78CM)",
+          "Cantidad": 360,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030212,
+          "Descripcion": "ESCOBILLON INTERIOR MULTIUSO 29 X 10.5 X 7 CM POSTE 120 CM",
+          "Cantidad": 480,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10030213,
+          "Descripcion": "ROLLO PALETIZADOR TRANSPARENTE 50CM * 2KG",
+          "Cantidad": 600,
+          "Marca": "GENERICO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10058970,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2025-07-24",
+      "Fecha_Comprometida": "2026-03-16",
+      "Fecha_ETA": "2026-02-23",
+      "Transporte": "Mar\u00edtimo",
+      "Embarcador": " ",
+      "LT_Pactado": 235,
+      "LT_Real": 214.0,
+      "Desviacion": -21.0,
+      "Dias_hasta_comprometida": 28,
+      "Dias_hasta_ETA": 7.0,
+      "Estado_Calculado": "Pr\u00f3ximo 7 d\u00edas",
+      "Estado_OC": "6.Atrasado +1mes",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10022618,
+          "Descripcion": "2983-22HD TECLE POLIPASTO CADENA A BATERIA 1 TON  M18 INC. CARGADOR Y 2 BAT. 12 AMP MILWAUKEE",
+          "Cantidad": 7,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    }
+  ],
+  "enTiempo": [
+    {
+      "Num_OC": 10063307,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2025-11-25",
+      "Fecha_Comprometida": "2026-02-17",
+      "Fecha_ETA": "2026-02-27",
+      "Transporte": "Mar\u00edtimo",
+      "Embarcador": " ",
+      "LT_Pactado": 84,
+      "LT_Real": 94.0,
+      "Desviacion": 10.0,
+      "Dias_hasta_comprometida": 1,
+      "Dias_hasta_ETA": 11.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 20,
+      "Items": [
+        {
+          "SKU": 10007295,
+          "Descripcion": "264620 CUERPO PISTOLA ENGRASADORA M18 MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10007921,
+          "Descripcion": "286720 CUERPO LLAVE DE IMPACTO HTIW. DE 1'' ONE KEY FUEL M18 (1500-1800LB-PIE) MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10010174,
+          "Descripcion": "220220 DETECTOR VOLTAJE A PILAS (2 X AAA) MILWAUKEE",
+          "Cantidad": 60,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011246,
+          "Descripcion": "48229803 MEDIDOR DE DISTANCIA 100MT MILWAUKEE",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012051,
+          "Descripcion": "226820 TERMOMETRO INFRAROJO (PIROMETRO) A BATERIA (9V)  MILWAUKEE",
+          "Cantidad": 40,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012433,
+          "Descripcion": "48228200 MOCHILA PORTA HERRAMIENTAS STD.MILWAUKEE",
+          "Cantidad": 70,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012685,
+          "Descripcion": "088020 CUERPO ASPIRADORA POLVO & LIQUIDO M18 FUEL MILWAUKEE",
+          "Cantidad": 13,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012834,
+          "Descripcion": "48229214 JGO. DE BARRETAS DE FUERZA DE 4PC. MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10015149,
+          "Descripcion": "48229802 MEDIDOR DE DISTANCIA 50MT MILWAUKEE",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10015771,
+          "Descripcion": "48892338 JUEGO DE BROCAS DE COBALTO DE 1/16\" A 1/2\" RED HELIX (23PC) MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10016500,
+          "Descripcion": "2366059 CUERPO FOCO PORTATIL ROVER M18 (S/BAT&S/CAR) 4000 LUMENES MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10016618,
+          "Descripcion": "288020 CUERPO ESMERIL ANGULAR 4.1/2\"-5\" SIN BLOQUEO M18 FUEL MILWAUKEE",
+          "Cantidad": 30,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018849,
+          "Descripcion": "48553490 BOLSO PARA CONTRATISTA 250MM X 280MM MILWAUKEE",
+          "Cantidad": 8,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018980,
+          "Descripcion": "282120 CUERPO SIERRA SABLE INALAM. FUEL M18 MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10020562,
+          "Descripcion": "48226510 ALICATE PICO LORO RECTA 10\" MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022058,
+          "Descripcion": "48111813 BATERIA FORGE 12.0 REDLITHIUM M18 MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023699,
+          "Descripcion": "2868-22HD CUERPO LLAVE DE IMPACTO C/ MANGO EN D  HTIW. DE 1\" + 2BAT/CARGADOR MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023700,
+          "Descripcion": "48111852 KIT 2 BATERIAS 5AH M18 MILWAUKEE",
+          "Cantidad": 50,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10044559,
+          "Descripcion": "088420 CUERPO SOPLADOR COMPACTO M18 FUEL MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 30010228,
+          "Descripcion": "48223711 METAL MARKER PEN WHITE MILWAUKEE",
+          "Cantidad": 300,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064204,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2025-12-29",
+      "Fecha_Comprometida": "2026-03-12",
+      "Fecha_ETA": "2026-02-28",
+      "Transporte": "Mar\u00edtimo",
+      "Embarcador": " ",
+      "LT_Pactado": 73,
+      "LT_Real": 61.0,
+      "Desviacion": -12.0,
+      "Dias_hasta_comprometida": 24,
+      "Dias_hasta_ETA": 12.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 28,
+      "Items": [
+        {
+          "SKU": 10006213,
+          "Descripcion": "48892802 JUEGO DE BROCAS ACERO RAPIDO 1/16\" A 1/2\"  29 PCS MILWAUKEE",
+          "Cantidad": 16,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10006646,
+          "Descripcion": "213120 CUERPO ROCKET LED TOWER LIGHT M18 MILWAUKEE",
+          "Cantidad": 19,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10007921,
+          "Descripcion": "286720 CUERPO LLAVE DE IMPACTO HTIW. DE 1'' ONE KEY FUEL M18 (1500-1800LB-PIE) MILWAUKEE",
+          "Cantidad": 9,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10010204,
+          "Descripcion": "48228425 CAJA HERRAMIENTAS GRANDE PACKOUT MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011066,
+          "Descripcion": "211621 LINTERNA LED CASCO 360\u00b0 RECARGABLE USB MILWAUKEE",
+          "Cantidad": 105,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011246,
+          "Descripcion": "48229803 MEDIDOR DE DISTANCIA 100MT MILWAUKEE",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011350,
+          "Descripcion": "48222210 JUEGO DESTORNILLADORES VDE 10PC MILWAUKEE",
+          "Cantidad": 15,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011358,
+          "Descripcion": "48228202 MOCHILA BAJO PERFIL MILWAUKEE",
+          "Cantidad": 47,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011447,
+          "Descripcion": "48227718 FLEXOMETRO 5 METROS MILWAUKEE",
+          "Cantidad": 200,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012082,
+          "Descripcion": "48899224 JUEGO DE BROCAS ESCALONADAS 1/8\" A 1.1/8\" 6PC. MILWAUKEE",
+          "Cantidad": 12,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012418,
+          "Descripcion": "48005712 HOJA DE SIERRA SABLE 6\" (PAQUETE DE 5 UN.) MILWAUKEE",
+          "Cantidad": 40,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012433,
+          "Descripcion": "48228200 MOCHILA PORTA HERRAMIENTAS STD.MILWAUKEE",
+          "Cantidad": 46,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012522,
+          "Descripcion": "48111850 BATERIA XC5.0 REDLITHIUM M18 MILWAUKEE",
+          "Cantidad": 70,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012767,
+          "Descripcion": "48229010 JUEGO DE DADOS CUAD. 1/2'' MILIM. Y PULG. 47PC. MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012844,
+          "Descripcion": "48221524 CUCHILLO DE BOLSILLO CAMUFLADO MILWAUKEE",
+          "Cantidad": 90,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012849,
+          "Descripcion": "48229516 JUEGO LLAVE PUNTA CORONA C/RATCHET DE 8MM A 22MM MILWAUKEE",
+          "Cantidad": 9,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10013484,
+          "Descripcion": "216121 LINTERNA RECARGABLE FOCO AJUSTABLE USB 1100 LUMENES MILWAUKEE",
+          "Cantidad": 243,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10014026,
+          "Descripcion": "277120 CUERPO BOMBA TRANSFERENCIA DE AGUA INALAM. M18 MILWAUKEE",
+          "Cantidad": 4,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10015149,
+          "Descripcion": "48229802 MEDIDOR DE DISTANCIA 50MT MILWAUKEE",
+          "Cantidad": 7,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10015771,
+          "Descripcion": "48892338 JUEGO DE BROCAS DE COBALTO DE 1/16\" A 1/2\" RED HELIX (23PC) MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018746,
+          "Descripcion": "295020 RADIO + CARGADOR M18 PACKOUT",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018860,
+          "Descripcion": "216321 LINTERNA LED CASCO RECARGABLE USB 600 LUMENES MILWAUKEE",
+          "Cantidad": 600,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018902,
+          "Descripcion": "291220 CUERPO ROTOMARTILLO M18 FUEL TOMA SDS PLUS DE 1\" MILWAUKEE",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018903,
+          "Descripcion": "244120 CUERPO PISTOLA DE CALAFATEO 300ML M12 MILWAUKEE",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018980,
+          "Descripcion": "282120 CUERPO SIERRA SABLE INALAM. FUEL M18 MILWAUKEE",
+          "Cantidad": 4,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10019933,
+          "Descripcion": "288220 CUERPO ESMERIL ANGULAR 4.1/2\"/5\" M18 FUEL AUTO STOP H/M MILWAUKEE",
+          "Cantidad": 52,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022057,
+          "Descripcion": "235820 CUERPO FOCO ROVER M18 2000 LUMINES MILWAUKEE",
+          "Cantidad": 40,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022059,
+          "Descripcion": "48111881 BATERIA FORGE 8.0 REDLITHIUM M18 MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064793,
+      "Proveedor": "Ferramentas Gedore do Brasil Ltda.",
+      "Marca": "GEDORE BR",
+      "Fecha_OC": "2026-01-19",
+      "Fecha_Comprometida": "2026-03-19",
+      "Fecha_ETA": "2026-02-26",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 59,
+      "LT_Real": 38.0,
+      "Desviacion": -21.0,
+      "Dias_hasta_comprometida": 31,
+      "Dias_hasta_ETA": 10.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 4,
+      "Items": [
+        {
+          "SKU": 10010089,
+          "Descripcion": "038540 BR CINCEL C/EMPU\u00a5ADURA 250MM GEDORE BR",
+          "Cantidad": 8,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10010089,
+          "Descripcion": "038540 BR CINCEL C/EMPU\u00a5ADURA 250MM GEDORE BR",
+          "Cantidad": 7,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10012454,
+          "Descripcion": "012302 BR JUEGO LLAVES ALLEN LARGAS L (3-14MM) GEDORE BR",
+          "Cantidad": 7,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10041617,
+          "Descripcion": "015300 BR UNION CARDANICA CUAD.1/2\" GEDORE BR",
+          "Cantidad": 1,
+          "Marca": "GEDORE BR"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064816,
+      "Proveedor": "Duram Masks A.C LTD",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-01-19",
+      "Fecha_Comprometida": "2026-03-19",
+      "Fecha_ETA": "2026-02-14",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 59,
+      "LT_Real": 26.0,
+      "Desviacion": -33.0,
+      "Dias_hasta_comprometida": 31,
+      "Dias_hasta_ETA": -2.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10023834,
+          "Descripcion": "MASCARA DE ESCAPE QUIMICO DURAM KIMI",
+          "Cantidad": 200,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10062186,
+      "Proveedor": "Ferramentas Gedore do Brasil Ltda.",
+      "Marca": "GEDORE BR",
+      "Fecha_OC": "2025-10-22",
+      "Fecha_Comprometida": "2026-03-22",
+      "Fecha_ETA": "2026-02-26",
+      "Transporte": "A\u00e9reo",
+      "Embarcador": " ",
+      "LT_Pactado": 151,
+      "LT_Real": 127.0,
+      "Desviacion": -24.0,
+      "Dias_hasta_comprometida": 34,
+      "Dias_hasta_ETA": 10.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10011557,
+          "Descripcion": "012152 BR JUEGO LLAVES ALLEN L DE 1/8\" A 9/16\" GEDORE BR\"",
+          "Cantidad": 50,
+          "Marca": "GEDORE BR"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063032,
+      "Proveedor": "Ferramentas Gedore do Brasil Ltda.",
+      "Marca": "GEDORE BR",
+      "Fecha_OC": "2025-11-19",
+      "Fecha_Comprometida": "2026-03-26",
+      "Fecha_ETA": "2026-02-26",
+      "Transporte": "A\u00e9reo",
+      "Embarcador": " ",
+      "LT_Pactado": 127,
+      "LT_Real": 99.0,
+      "Desviacion": -28.0,
+      "Dias_hasta_comprometida": 38,
+      "Dias_hasta_ETA": 10.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10010113,
+          "Descripcion": "017202 BR JUEGO DADOS POLIGONAL CUAD. 3/4'' DE 7/8'' A 2'' 14PCS.PG GEDORE BR",
+          "Cantidad": 5,
+          "Marca": "GEDORE BR"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065114,
+      "Proveedor": "Ferramentas Gedore do Brasil Ltda.",
+      "Marca": "GEDORE BR",
+      "Fecha_OC": "2026-01-27",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": "2026-02-26",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 86,
+      "LT_Real": 30.0,
+      "Desviacion": -56.0,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": 10.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 12,
+      "Items": [
+        {
+          "SKU": 10006365,
+          "Descripcion": "014160 BR LLAVE CHICHARRA CUAD. 3/8\" GEDORE BR",
+          "Cantidad": 3,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10007094,
+          "Descripcion": "015014 BR DADO DE IMPACTO HEXAGONAL CUAD. 1/2\" DE 19MM GEDORE BR",
+          "Cantidad": 2,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10010039,
+          "Descripcion": "002566 BR LLAVE PUNTA CORONA HEX. DE 1.1/8\" GEDORE BR",
+          "Cantidad": 8,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10010043,
+          "Descripcion": "002654 BR JUEGO LLAVES PUNTA CORONA-ACODADA DE 1/4\" A 1.1/4\" DE 16 PIEZAS GEDORE BR",
+          "Cantidad": 12,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10010050,
+          "Descripcion": "028313 BR LLAVE AJUSTABLE DE 10\" GEDORE BR",
+          "Cantidad": 17,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10010059,
+          "Descripcion": "033454 BR LLAVE DE TUBO DE 18\" MODELO AMERICANO GEDORE BR",
+          "Cantidad": 20,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10011838,
+          "Descripcion": "002524 BR LLAVE PUNTA CORONA HEX. DE 30MM GEDORE BR",
+          "Cantidad": 5,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10012454,
+          "Descripcion": "012302 BR JUEGO LLAVES ALLEN LARGAS L (3-14MM) GEDORE BR",
+          "Cantidad": 23,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10012456,
+          "Descripcion": "037340 BR MARTILLO DE BOLA 32OZ M/F GEDORE BR",
+          "Cantidad": 7,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10041445,
+          "Descripcion": "018200 BR ADAPTADOR DE 1\" H A 3/4\" M GEDORE BR",
+          "Cantidad": 3,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10041556,
+          "Descripcion": "020059 BR DADO DE IMPACTO CUAD 3/4\" DE 1.1/8\" GEDORE BR",
+          "Cantidad": 4,
+          "Marca": "GEDORE BR"
+        },
+        {
+          "SKU": 10041647,
+          "Descripcion": "021065 BR DADO DE IMPACTO CUAD. 1\" DE 1.1/2\" GEDORE BR",
+          "Cantidad": 4,
+          "Marca": "GEDORE BR"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063489,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2025-12-02",
+      "Fecha_Comprometida": "2026-04-30",
+      "Fecha_ETA": "2026-02-27",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 149,
+      "LT_Real": 87.0,
+      "Desviacion": -62.0,
+      "Dias_hasta_comprometida": 73,
+      "Dias_hasta_ETA": 11.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 30010228,
+          "Descripcion": "48223711 METAL MARKER PEN WHITE MILWAUKEE",
+          "Cantidad": 400,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063780,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2025-12-10",
+      "Fecha_Comprometida": "2026-03-03",
+      "Fecha_ETA": "2026-02-27",
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 83,
+      "LT_Real": 79.0,
+      "Desviacion": -4.0,
+      "Dias_hasta_comprometida": 15,
+      "Dias_hasta_ETA": 11.0,
+      "Estado_Calculado": "En tiempo",
+      "Estado_OC": "6.Atrasado +1mes",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10013487,
+          "Descripcion": "48229413 JUEGO LLAVE PUNTA CORONA C/RATCHET CAB/FLEX. DE 1/4'' A 1'' MILWAUKEE",
+          "Cantidad": 16,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    }
+  ],
+  "sinETA": [
+    {
+      "Num_OC": 10065192,
+      "Proveedor": "ENERPAC TOOL GROUP",
+      "Marca": "ENERPAC",
+      "Fecha_OC": "2026-01-29",
+      "Fecha_Comprometida": "2026-02-16",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 18,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 0,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 3,
+      "Items": [
+        {
+          "SKU": 10024088,
+          "Descripcion": "HCR10010 CILINDRO HIDRAULICO D/E DE 100TON CARRERA 10\"(250MM) ENERPAC",
+          "Cantidad": 2,
+          "Marca": "ENERPAC"
+        },
+        {
+          "SKU": 10024118,
+          "Descripcion": "HCR1006 CILINDRO HIDRAULICO D/E DE 113TON CARRERA 6\"(150MM) ENERPAC",
+          "Cantidad": 2,
+          "Marca": "ENERPAC"
+        },
+        {
+          "SKU": 10024119,
+          "Descripcion": "HCR10012 CILINDRO HIDRAULICO D/E DE 113TON CARRERA 12\"(305MM) ENERPAC",
+          "Cantidad": 2,
+          "Marca": "ENERPAC"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065244,
+      "Proveedor": "ENERPAC TOOL GROUP",
+      "Marca": "ENERPAC",
+      "Fecha_OC": "2026-01-29",
+      "Fecha_Comprometida": "2026-02-16",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 18,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 0,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 2,
+      "Items": [
+        {
+          "SKU": 10024118,
+          "Descripcion": "HCR1006 CILINDRO HIDRAULICO D/E DE 113TON CARRERA 6\"(150MM) ENERPAC",
+          "Cantidad": 2,
+          "Marca": "ENERPAC"
+        },
+        {
+          "SKU": 10024119,
+          "Descripcion": "HCR10012 CILINDRO HIDRAULICO D/E DE 113TON CARRERA 12\"(305MM) ENERPAC",
+          "Cantidad": 2,
+          "Marca": "ENERPAC"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065073,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-01-27",
+      "Fecha_Comprometida": "2026-02-20",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 24,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 4,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10021518,
+          "Descripcion": "53227 SET EXTRACTOR DE CABEZALES HEXAGONALES 25 PCS IRWIN",
+          "Cantidad": 1,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065049,
+      "Proveedor": "CRC INDUSTRIES AMERICAS GROUP",
+      "Marca": "AMBERSIL",
+      "Fecha_OC": "2026-01-26",
+      "Fecha_Comprometida": "2026-02-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 28,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 7,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 30010029,
+          "Descripcion": "FLAW DETECTOR DEVELOPER 400 ML 30290-AA AMBERSIL",
+          "Cantidad": 324,
+          "Marca": "AMBERSIL"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065567,
+      "Proveedor": "ENERPAC TOOL GROUP",
+      "Marca": "ENERPAC",
+      "Fecha_OC": "2026-02-10",
+      "Fecha_Comprometida": "2026-02-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 13,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 7,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 2,
+      "Items": [
+        {
+          "SKU": 10024162,
+          "Descripcion": "EB18V5 BATERIA DE IONES DE LITIO DE 5,5AH DE 18V ENERPAC",
+          "Cantidad": 4,
+          "Marca": "ENERPAC"
+        },
+        {
+          "SKU": 10024163,
+          "Descripcion": "EC182EQC CARGADOR RAPIDO ENCHUFE EUROPEO 230V ENERPAC",
+          "Cantidad": 2,
+          "Marca": "ENERPAC"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065666,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-02-13",
+      "Fecha_Comprometida": "2026-02-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 10,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 7,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 3,
+      "Items": [
+        {
+          "SKU": 10021882,
+          "Descripcion": "ELEMENTO FILTRO DE ACEITE NP: 319481 HYDAC",
+          "Cantidad": 2,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10021882,
+          "Descripcion": "ELEMENTO FILTRO DE ACEITE NP: 319481 HYDAC",
+          "Cantidad": 2,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10021518,
+          "Descripcion": "53227 SET EXTRACTOR DE CABEZALES HEXAGONALES 25 PCS IRWIN",
+          "Cantidad": 2,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063778,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2025-12-10",
+      "Fecha_Comprometida": "2026-03-02",
+      "Fecha_ETA": null,
+      "Transporte": "Mar\u00edtimo",
+      "Embarcador": " ",
+      "LT_Pactado": 82,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 14,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 24,
+      "Items": [
+        {
+          "SKU": 10012335,
+          "Descripcion": "248820 CUERPO CAUTIN INALAMBRICO M12 MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012687,
+          "Descripcion": "48324013 JUEGO PUNTAS DE IMPACTO Y BROCAS (BITS) 50 PC MILWAUKEE",
+          "Cantidad": 50,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10014117,
+          "Descripcion": "285520 CUERPO LLAVE DE IMPACTO COMPACTA M18 FUEL CUAD. 1/2'' 250LB/FT MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10021393,
+          "Descripcion": "301720 CUERPO SOPLADORA JARDIN M18 FUEL (S/BAT) MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022058,
+          "Descripcion": "48111813 BATERIA FORGE 12.0 REDLITHIUM M18 MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022059,
+          "Descripcion": "48111881 BATERIA FORGE 8.0 REDLITHIUM M18 MILWAUKEE",
+          "Cantidad": 75,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022660,
+          "Descripcion": "236820 FOCO PORTALTIL ROVER PANEL TRIPLE 4500 LUM M18 MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022661,
+          "Descripcion": "48112425 BATERIA HI OUTPUT CP 2,5  REDLITHIUM M12 MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023700,
+          "Descripcion": "48111852 KIT 2 BATERIAS 5AH M18 MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023757,
+          "Descripcion": "48591862S KIT DE INICIO M18 XC6.0 MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023758,
+          "Descripcion": "212720 LUZ PARA IGUALACION DE COLOR PARA PINTURA Y PULIDO M12 MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023759,
+          "Descripcion": "272220 SIERRA SABLE M18 FUEL MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023760,
+          "Descripcion": "367020 RECTIFICADORA CON FRENO M18 FUEL  DE 4-1/2 \"- 6 \" CON INTERRUPTOR DE PALETA MILWAUKEE",
+          "Cantidad": 15,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023761,
+          "Descripcion": "296721B LLAVE DE IMPACTO DE ALTO TORQUE M18 FUEL DE 1/2\" CON KIT DE ANILLO DE FRICCION MILWAUKEE",
+          "Cantidad": 50,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023762,
+          "Descripcion": "286922HD LLAVE DE IMPACTO DE TORQUE ALTO CON YUNQUE EXTENDIDO Y MANGO EN D M18 FUEL DE 1\" CON ONE-KEY MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023763,
+          "Descripcion": "286822HD KIT DE LLAVE DE IMPACTO DE ALTO TORQUE CON MANGO EN D M18 FUEL DE 1\" CON ONE-KEY MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023764,
+          "Descripcion": "288222 RECTIFICADORA CON FRENO M18 FUEL DE 4-1/2\" / 5\" CON INTERRUPTOR DE PALETA SIN BLOQUEO ONE-KEY MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023765,
+          "Descripcion": "48892801 JUEGO DE BROCAS CON ACABADO DE OXIDO NEGRO THUNDERBOLT DE 21\u00ffPIEZAS MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023766,
+          "Descripcion": "48899257 KIT ELECTRICO SHOCKWAVE IMPACT DUTY (N 1, N 4, N 9) MILWAUKEE",
+          "Cantidad": 25,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023767,
+          "Descripcion": "48324094 JUEGO DE BROCAS PARA DESTORNILLADOR SHOCKWAVE IMPACT DUTY DE 80 PIEZAS MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023768,
+          "Descripcion": "48894631 JUEGO DE BROCAS DE TITANIO SHOCKWAVE IMPACT DUTY RED HELIX DE 23 PIEZAS MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023769,
+          "Descripcion": "49667009 JUEGO DE 43 PIEZAS DE CUBOS PROFUNDOS SAE Y METRICOS CON BOCA DE 3/8\" DE 6 PUNTAS SHOCKWAVE IMPACT DUTY MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023770,
+          "Descripcion": "49666801 JUEGO DE 19 PIEZAS DE CUBOS METRICOS SHOCKWAVE IMPACT DUTY CON BOCA DE 3/8\" Y PACKOUT MILWAUKE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10030151,
+          "Descripcion": "48112420 BATERIA M12 REDLITHIUM 2.0 AH MILWAUKEE",
+          "Cantidad": 20,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064801,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2026-01-19",
+      "Fecha_Comprometida": "2026-03-02",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 42,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 14,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 8,
+      "Items": [
+        {
+          "SKU": 10015149,
+          "Descripcion": "48229802 MEDIDOR DE DISTANCIA 50MT MILWAUKEE",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10018717,
+          "Descripcion": "48228343 ESTACION DE HERRAMIENTAS PACKOUT",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10020562,
+          "Descripcion": "48226510 ALICATE PICO LORO RECTA 10\" MILWAUKEE",
+          "Cantidad": 3,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022469,
+          "Descripcion": "48228433 ORGANIZADOR CON GABETA INCLINABLE PACKOUT MILWAUKEE",
+          "Cantidad": 6,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10014117,
+          "Descripcion": "285520 CUERPO LLAVE DE IMPACTO COMPACTA M18 FUEL CUAD. 1/2'' 250LB/FT MILWAUKEE",
+          "Cantidad": 2,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10006213,
+          "Descripcion": "48892802 JUEGO DE BROCAS ACERO RAPIDO 1/16\" A 1/2\"  29 PCS MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10011447,
+          "Descripcion": "48227718 FLEXOMETRO 5 METROS MILWAUKEE",
+          "Cantidad": 6,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10012418,
+          "Descripcion": "48005712 HOJA DE SIERRA SABLE 6\" (PAQUETE DE 5 UN.) MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10062703,
+      "Proveedor": "Shenzhen Cykeo Information Technology Co.,Ltd",
+      "Marca": "OTRO",
+      "Fecha_OC": "2025-11-06",
+      "Fecha_Comprometida": "2026-03-06",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 120,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 18,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10023622,
+          "Descripcion": "CK-GWHA UHF RFID GABINETE INTELIGENTE RESIDUOS PELIGROSOS",
+          "Cantidad": 3,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064364,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2026-01-06",
+      "Fecha_Comprometida": "2026-03-06",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 59,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 18,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 5,
+      "Items": [
+        {
+          "SKU": 10023843,
+          "Descripcion": "45340010 DADO PROFUNDO 3/8\" DE 10 MM MILWAUKEE",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023846,
+          "Descripcion": "45340013 DADO PROFUNDO 3/8\" DE 13 MM MILWAUKEE",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023848,
+          "Descripcion": "45340015 DADO PROFUNDO 3/8\" DE 15 MM MILWAUKEE",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023857,
+          "Descripcion": "45349080 DADO 3/8\" DE 10 MM MILWAUKEE",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023867,
+          "Descripcion": "48229351 JGO.EXTENSIONES 3/8\" X3 MILWAUKEE",
+          "Cantidad": 1,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065181,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-01-28",
+      "Fecha_Comprometida": "2026-03-10",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 41,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 22,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10024036,
+          "Descripcion": "FM01 MAQUINA HUMO PORTATIL FILMOG ACE/40W C/CONTROL REMOTO PARA FOTOGRAFIA ULANZI",
+          "Cantidad": 5,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065031,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2026-01-23",
+      "Fecha_Comprometida": "2026-03-11",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 47,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 23,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 3,
+      "Items": [
+        {
+          "SKU": 10012418,
+          "Descripcion": "48005712 HOJA DE SIERRA SABLE 6\" (PAQUETE DE 5 UN.) MILWAUKEE",
+          "Cantidad": 10,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023417,
+          "Descripcion": "89520 CUERPO ASPIRADORA TIPO MOCHILA M18 FUEL 3 EN 1 MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 40021066,
+          "Descripcion": "278420 CUERPO ESMERIL RECTO FUEL M18 DE 1/4\" MILWAUKEE",
+          "Cantidad": 2,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10062190,
+      "Proveedor": "ENERPAC TOOL GROUP",
+      "Marca": "ENERPAC",
+      "Fecha_OC": "2025-10-22",
+      "Fecha_Comprometida": "2026-03-15",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 144,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 27,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10023133,
+          "Descripcion": "BHP551G CONJUNTO DE EXTRACTORES DE SUJECION HIDRAULICOS DE 50 TONELADAS CON BOMBA MANUAL ENERPAC",
+          "Cantidad": 1,
+          "Marca": "ENERPAC"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065673,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-02-13",
+      "Fecha_Comprometida": "2026-03-16",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 31,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 28,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10022600,
+          "Descripcion": "SC8551A001MS ASCO VALVULA SOLENOIDE DE 5 VIAS DE 1/4\" NPT 24 VDC",
+          "Cantidad": 5,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065308,
+      "Proveedor": "ENERPAC TOOL GROUP",
+      "Marca": "ENERPAC",
+      "Fecha_OC": "2026-02-03",
+      "Fecha_Comprometida": "2026-03-17",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 42,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 29,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10021715,
+          "Descripcion": "RC256 CILINDRO HIDRAULICO S/E DE 25TON CARRERA 6\"(150MM) ENERPAC",
+          "Cantidad": 1,
+          "Marca": "ENERPAC"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065273,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-02-02",
+      "Fecha_Comprometida": "2026-03-21",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 47,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 33,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10022600,
+          "Descripcion": "SC8551A001MS ASCO VALVULA SOLENOIDE DE 5 VIAS DE 1/4\" NPT 24 VDC",
+          "Cantidad": 1,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064579,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "ALLEN BRADLEY",
+      "Fecha_OC": "2026-01-12",
+      "Fecha_Comprometida": "2026-04-01",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 79,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 44,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10022438,
+          "Descripcion": "JUEGO CONTACTO 600V 18A ALLEN BRADLEY",
+          "Cantidad": 27,
+          "Marca": "ALLEN BRADLEY"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064203,
+      "Proveedor": "LITTLE GIANT",
+      "Marca": "LITTLE GIANT",
+      "Fecha_OC": "2025-12-29",
+      "Fecha_Comprometida": "2026-04-12",
+      "Fecha_ETA": null,
+      "Transporte": "Mar\u00edtimo",
+      "Embarcador": " ",
+      "LT_Pactado": 104,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 55,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 4,
+      "Items": [
+        {
+          "SKU": 20010238,
+          "Descripcion": "18509-240  ESCALERA LG CAGE 5'-9' IAA FG W/WHL LIFT LITTLE GIANT",
+          "Cantidad": 21,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010239,
+          "Descripcion": "18515-240 ESCALERA LG CAGE 8'-14' IAA FG W/WHL LIFT LITTLE GIANT",
+          "Cantidad": 15,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010313,
+          "Descripcion": "10410BA ESCALERA SAFETY STEP 4 PELD.C/BAR. LITTLE GIANT",
+          "Cantidad": 15,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010350,
+          "Descripcion": "10310BA ESCALERA SAFETY STEP 3 PELD.C/BAR. LITTLE GIANT",
+          "Cantidad": 10,
+          "Marca": "LITTLE GIANT"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064899,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "ALLEN BRADLEY",
+      "Fecha_OC": "2026-01-20",
+      "Fecha_Comprometida": "2026-04-13",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 83,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 56,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10022438,
+          "Descripcion": "JUEGO CONTACTO 600V 18A ALLEN BRADLEY",
+          "Cantidad": 17,
+          "Marca": "ALLEN BRADLEY"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064319,
+      "Proveedor": "JIMI IOT",
+      "Marca": "OTRO",
+      "Fecha_OC": "2025-12-30",
+      "Fecha_Comprometida": "2026-04-15",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 106,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 58,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10018752,
+          "Descripcion": "GPS TRACKER CONCOX LL303",
+          "Cantidad": 900,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064320,
+      "Proveedor": "HANGZHOU DONGCHENG ELECTRONIC CO",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-01-02",
+      "Fecha_Comprometida": "2026-04-15",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 103,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 58,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 5,
+      "Items": [
+        {
+          "SKU": 10023897,
+          "Descripcion": "LOCKER 112 PUERTAS CONTROL",
+          "Cantidad": 3,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10023898,
+          "Descripcion": "LOCKER 112 PUERTAS SIDE",
+          "Cantidad": 3,
+          "Marca": "OTRO"
+        },
+        {
+          "SKU": 10023804,
+          "Descripcion": "TOOL LOCKER CON PESO",
+          "Cantidad": 2,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10023895,
+          "Descripcion": "LOCKER TORQUIMETRO 9 CONTROL",
+          "Cantidad": 3,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10023896,
+          "Descripcion": "LOCKER TORQUIMETRO 9 SIDE",
+          "Cantidad": 3,
+          "Marca": "GENERICO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065046,
+      "Proveedor": "DR. SHRINK - INTERNATIONAL",
+      "Marca": "DR.SHRINK",
+      "Fecha_OC": "2026-01-23",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 90,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10041576,
+          "Descripcion": "SHRINK FILM UV 20' X 100\u2032 12MIL (DS-2012100) WHITE DR.SHRINK",
+          "Cantidad": 41,
+          "Marca": "DR.SHRINK"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065047,
+      "Proveedor": "SKIPPER",
+      "Marca": "SKIPPER",
+      "Fecha_OC": "2026-01-26",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 87,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 3,
+      "Items": [
+        {
+          "SKU": 20010001,
+          "Descripcion": "SKIPPER01-ORW CABEZAL NARANJO RETRACTIL ROJO/BLANCO SKIPPER",
+          "Cantidad": 93,
+          "Marca": "SKIPPER"
+        },
+        {
+          "SKU": 20010004,
+          "Descripcion": "KIT DE SKIPPER CONJUNTO POSTE Y BASE (NARANJO)",
+          "Cantidad": 35,
+          "Marca": "SKIPPER"
+        },
+        {
+          "SKU": 20010006,
+          "Descripcion": "MSUPPORT01 SOPORTE MAGN. CABEZAL RETRACTIL SKIPPER",
+          "Cantidad": 51,
+          "Marca": "SKIPPER"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065048,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2026-01-26",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 87,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 9,
+      "Items": [
+        {
+          "SKU": 10006213,
+          "Descripcion": "48892802 JUEGO DE BROCAS ACERO RAPIDO 1/16\" A 1/2\"  29 PCS MILWAUKEE",
+          "Cantidad": 17,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10010673,
+          "Descripcion": "48227727 FLEXOMETRO CONTRATISTA 8 METROS MILWAUKEE",
+          "Cantidad": 140,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10013274,
+          "Descripcion": "2103 LINTERNA PARA CASCO 350 LUMENES A PILAS AAA MILWAUKEE",
+          "Cantidad": 128,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10015038,
+          "Descripcion": "213620 CUERPO ROCKET LED TOWER LIGHT M18 CAB/MULTIDIRECCIONAL MILWAUKEE",
+          "Cantidad": 5,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10015040,
+          "Descripcion": "2962P20 CUERPO LLAVE DE IMPACTO COMPACTA INALAMBRICA CUAD. 1/2'' M18 FUEL 450/600LB/FT MILWAUKEE",
+          "Cantidad": 32,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10020920,
+          "Descripcion": "2967259 LLAVE IMPACTO 1/2\" M18 FUEL HT(1100/1500LB/PIE) MILWAUKEE",
+          "Cantidad": 33,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10022060,
+          "Descripcion": "48228427 CAJA HERRAMIENTAS C/RUEDAS PACKOUT MILWAUKEE",
+          "Cantidad": 16,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10023602,
+          "Descripcion": "48221026M FLEXOMETRO 8 M/26 PIES DE HOJA ANCHA MAGNETICO MILWAUKEE",
+          "Cantidad": 40,
+          "Marca": "MILWAUKEE"
+        },
+        {
+          "SKU": 10099903,
+          "Descripcion": "286420 CUERPO LLAVE DE IMPACTO HT. DE 3/4'' ONE KEY FUEL M18 (1200-1500LB-PIE) MILWAUKEE",
+          "Cantidad": 36,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065064,
+      "Proveedor": "VOGEL GERMANY",
+      "Marca": "VOGEL",
+      "Fecha_OC": "2026-01-26",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 87,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 4,
+      "Items": [
+        {
+          "SKU": 10011680,
+          "Descripcion": "202180 PIE DE METRO DIGITAL 150MM (0-150/0.01MM) C/USB VOGEL",
+          "Cantidad": 24,
+          "Marca": "VOGEL"
+        },
+        {
+          "SKU": 10011682,
+          "Descripcion": "201013 PIE DE METRO 300MM VOGEL",
+          "Cantidad": 9,
+          "Marca": "VOGEL"
+        },
+        {
+          "SKU": 10011686,
+          "Descripcion": "411011 FEELER 0.03-1.00 MILIM. 31 HOJAS VOGEL",
+          "Cantidad": 10,
+          "Marca": "VOGEL"
+        },
+        {
+          "SKU": 10011765,
+          "Descripcion": "141105-121 FLEXOMETRO 5 METROS VOGEL",
+          "Cantidad": 173,
+          "Marca": "VOGEL"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065065,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "RUST-OLEUM",
+      "Fecha_OC": "2026-01-26",
+      "Fecha_Comprometida": "2026-04-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 87,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 66,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 3,
+      "Items": [
+        {
+          "SKU": 10018852,
+          "Descripcion": "PINTURA SPRAY INVERTIDA FLUORESCENTE NARANJA",
+          "Cantidad": 300,
+          "Marca": "RUST-OLEUM"
+        },
+        {
+          "SKU": 10018853,
+          "Descripcion": "PINTURA SPRAY INVERTIDA FLUORESCENTE AZUL",
+          "Cantidad": 108,
+          "Marca": "RUST-OLEUM"
+        },
+        {
+          "SKU": 10018854,
+          "Descripcion": "PINTURA SPRAY INVERTIDA FLUORESCENTE VERDE",
+          "Cantidad": 480,
+          "Marca": "RUST-OLEUM"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065112,
+      "Proveedor": "LITTLE GIANT",
+      "Marca": "LITTLE GIANT",
+      "Fecha_OC": "2026-01-27",
+      "Fecha_Comprometida": "2026-05-23",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 116,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 96,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 5,
+      "Items": [
+        {
+          "SKU": 20010064,
+          "Descripcion": "18503-240  ESCALERA LG CAGE 3'-5' IAA FG W/WHL LIFT LITTLE GIANT",
+          "Cantidad": 7,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010238,
+          "Descripcion": "18509-240  ESCALERA LG CAGE 5'-9' IAA FG W/WHL LIFT LITTLE GIANT",
+          "Cantidad": 7,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010239,
+          "Descripcion": "18515-240 ESCALERA LG CAGE 8'-14' IAA FG W/WHL LIFT LITTLE GIANT",
+          "Cantidad": 28,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010313,
+          "Descripcion": "10410BA ESCALERA SAFETY STEP 4 PELD.C/BAR. LITTLE GIANT",
+          "Cantidad": 4,
+          "Marca": "LITTLE GIANT"
+        },
+        {
+          "SKU": 20010350,
+          "Descripcion": "10310BA ESCALERA SAFETY STEP 3 PELD.C/BAR. LITTLE GIANT",
+          "Cantidad": 3,
+          "Marca": "LITTLE GIANT"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063779,
+      "Proveedor": "HANGZHOU DONGCHENG ELECTRONIC CO",
+      "Marca": "GENERICO",
+      "Fecha_OC": "2025-12-12",
+      "Fecha_Comprometida": "2026-07-01",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 201,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 135,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 3,
+      "Items": [
+        {
+          "SKU": 10017007,
+          "Descripcion": "LOCKER INDUSTRIAL P/HERRAMIENTAS-18 PUERTAS (INCL.CONFIG.BASICA Y ACCES.)",
+          "Cantidad": 10,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10022564,
+          "Descripcion": "E-LOCKER STANDARD LATERAL 18 CASILLEROS",
+          "Cantidad": 3,
+          "Marca": "GENERICO"
+        },
+        {
+          "SKU": 10022566,
+          "Descripcion": "E-LOCKER GRANDE. LATERAL 8 CASILLEROS",
+          "Cantidad": 3,
+          "Marca": "GENERICO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063777,
+      "Proveedor": "Changsha Zhonggu Intelligent Equipment Manufacturing Co., LTD",
+      "Marca": "OTRO",
+      "Fecha_OC": "2025-12-11",
+      "Fecha_Comprometida": "2026-07-30",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 231,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": 164,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "1.A Tiempo",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10019000,
+          "Descripcion": "MAQUINA DISPENSADORA MODELO ZG-D900-9C(22SP)",
+          "Cantidad": 10,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065412,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "CATERPILLAR",
+      "Fecha_OC": "2026-02-03",
+      "Fecha_Comprometida": "2026-02-11",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 8,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -5,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "2.Atrasado menos de 1 sem",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10024125,
+          "Descripcion": "5897435 OREJA SOPORTE ESLABON DE 138-7574 CATERPILLAR",
+          "Cantidad": 4,
+          "Marca": "CATERPILLAR"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063545,
+      "Proveedor": "ENERPAC TOOL GROUP",
+      "Marca": "ENERPAC",
+      "Fecha_OC": "2025-12-03",
+      "Fecha_Comprometida": "2026-02-15",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 74,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -1,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "2.Atrasado menos de 1 sem",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10023620,
+          "Descripcion": "LWC16 CU\u00d1A DE ELEVACION VERTICAL ALTURA DE ELEVACION 0,83 PULGADAS ENERPAC",
+          "Cantidad": 1,
+          "Marca": "ENERPAC"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10063607,
+      "Proveedor": "AMAZING INDUSTRIES",
+      "Marca": "VELKEN",
+      "Fecha_OC": "2025-12-05",
+      "Fecha_Comprometida": "2026-02-05",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 62,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -11,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "3.Atrasado +7d",
+      "Lineas": 8,
+      "Items": [
+        {
+          "SKU": 10023735,
+          "Descripcion": "GUANTE CABRITILLA TPR T-S VELKEN",
+          "Cantidad": 250,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023736,
+          "Descripcion": "GUANTE CABRITILLA TPR T-M VELKEN",
+          "Cantidad": 650,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023737,
+          "Descripcion": "GUANTE CABRITILLA TPR T-L VELKEN",
+          "Cantidad": 2800,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023738,
+          "Descripcion": "GUANTE CABRITILLA TPR T-XL VELKEN",
+          "Cantidad": 2800,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023739,
+          "Descripcion": "GUANTE CABRITILLA TPR C/FORRO T-S VELKEN",
+          "Cantidad": 250,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023740,
+          "Descripcion": "GUANTE CABRITILLA TPR C/FORRO T-M VELKEN",
+          "Cantidad": 650,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023741,
+          "Descripcion": "GUANTE CABRITILLA TPR C/FORRO T-L VELKEN",
+          "Cantidad": 2800,
+          "Marca": "VELKEN"
+        },
+        {
+          "SKU": 10023742,
+          "Descripcion": "GUANTE CABRITILLA TPR C/FORRO T-XL VELKEN",
+          "Cantidad": 2800,
+          "Marca": "VELKEN"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065627,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-02-11",
+      "Fecha_Comprometida": "2026-02-05",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": -6,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -11,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "3.Atrasado +7d",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10018767,
+          "Descripcion": "ELEMENTO DE FILTRO PARA ACEITE 02250194-596 SULLAIR",
+          "Cantidad": 10,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065193,
+      "Proveedor": "MILWAUKEE ELECTRIC TOOL CORPORATION",
+      "Marca": "MILWAUKEE",
+      "Fecha_OC": "2026-01-28",
+      "Fecha_Comprometida": "2026-01-28",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 0,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -19,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "4.Atrasado +14d",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10018860,
+          "Descripcion": "216321 LINTERNA LED CASCO RECARGABLE USB 600 LUMENES MILWAUKEE",
+          "Cantidad": 22,
+          "Marca": "MILWAUKEE"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10065418,
+      "Proveedor": "M&I SUPPLIERS CORP",
+      "Marca": "SKIPPER",
+      "Fecha_OC": "2026-02-04",
+      "Fecha_Comprometida": "2026-01-28",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": -7,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -19,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "4.Atrasado +14d",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 20010006,
+          "Descripcion": "MSUPPORT01 SOPORTE MAGN. CABEZAL RETRACTIL SKIPPER",
+          "Cantidad": 1,
+          "Marca": "SKIPPER"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064664,
+      "Proveedor": "Shenzhen Cykeo Information Technology Co.,Ltd",
+      "Marca": "OTRO",
+      "Fecha_OC": "2026-01-13",
+      "Fecha_Comprometida": "2026-01-30",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 17,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -17,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "4.Atrasado +14d",
+      "Lineas": 1,
+      "Items": [
+        {
+          "SKU": 10023040,
+          "Descripcion": "PORTICO SENSOR RFID 426X45X1555 MM CYKEO",
+          "Cantidad": 3,
+          "Marca": "OTRO"
+        }
+      ]
+    },
+    {
+      "Num_OC": 10064541,
+      "Proveedor": "VOGEL GERMANY",
+      "Marca": "VOGEL",
+      "Fecha_OC": "2026-01-06",
+      "Fecha_Comprometida": "2026-02-01",
+      "Fecha_ETA": null,
+      "Transporte": "Sin Informaci\u00f3n",
+      "Embarcador": " ",
+      "LT_Pactado": 26,
+      "LT_Real": null,
+      "Desviacion": null,
+      "Dias_hasta_comprometida": -15,
+      "Dias_hasta_ETA": null,
+      "Estado_Calculado": "Sin ETA",
+      "Estado_OC": "4.Atrasado +14d",
+      "Lineas": 2,
+      "Items": [
+        {
+          "SKU": 10012009,
+          "Descripcion": "641205 ANEMOMETRO DIGITAL 0,3-30M/SEG VOGEL",
+          "Cantidad": 4,
+          "Marca": "VOGEL"
+        },
+        {
+          "SKU": 10012009,
+          "Descripcion": "641205 ANEMOMETRO DIGITAL 0,3-30M/SEG VOGEL",
+          "Cantidad": 1,
+          "Marca": "VOGEL"
+        }
+      ]
+    }
+  ]
+};
+        </script>
+    <script>
+        let allData = [];
+        let filteredData = [];
+
+        // Función para formatear fechas
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+
+        // Función para calcular días entre fechas
+        function daysBetween(date1, date2) {
+            const d1 = new Date(date1);
+            const d2 = new Date(date2);
+            const diff = d2 - d1;
+            return Math.floor(diff / (1000 * 60 * 60 * 24));
+        }
+
+        // Función para sumar días a una fecha
+        function addDays(dateStr, days) {
+            if (!dateStr) return null;
+            const date = new Date(dateStr);
+            date.setDate(date.getDate() + days);
+            return date;
+        }
+
+        // Inicializar datos
+        function initDashboard() {
+            allData = [
+                ...dashboardData.atrasados.map(d => ({...d, estado_grupo: 'atrasado'})),
+                ...dashboardData.proximos.map(d => ({...d, estado_grupo: 'proximo'})),
+                ...dashboardData.enTiempo.map(d => ({...d, estado_grupo: 'en_tiempo'})),
+                ...dashboardData.sinETA.map(d => ({...d, estado_grupo: 'sin_eta'}))
+            ];
+
+            filteredData = [...allData];
+
+            updateKPIs();
+            populateFilters();
+            renderCharts();
+            renderTables();
+        }
+
+        // Actualizar KPIs
+        function updateKPIs() {
+            const kpis = dashboardData.kpis;
+            
+            document.getElementById('kpi-atrasados').textContent = kpis.atrasados;
+            document.getElementById('kpi-proximos').textContent = kpis.proximos_7d;
+            document.getElementById('kpi-en-tiempo').textContent = kpis.en_tiempo;
+            document.getElementById('kpi-sin-eta').textContent = kpis.sin_eta;
+
+            // Calcular DIFOT
+            const totalConETA = kpis.atrasados + kpis.proximos_7d + kpis.en_tiempo;
+            const enTiempo = kpis.sin_desviacion;
+            const difot = totalConETA > 0 ? ((enTiempo / totalConETA) * 100).toFixed(1) : 0;
+            document.getElementById('kpi-difot').textContent = difot + '%';
+
+            // Desviación promedio
+            const desv = kpis.desviacion_promedio > 0 ? '+' + kpis.desviacion_promedio.toFixed(1) : kpis.desviacion_promedio.toFixed(1);
+            document.getElementById('kpi-desviacion').textContent = desv + 'd';
+        }
+
+        // Poblar filtros
+        function populateFilters() {
+            const proveedores = [...new Set(allData.map(d => d.Proveedor))].sort();
+            const selectProveedor = document.getElementById('filterProveedor');
+            
+            selectProveedor.innerHTML = '<option value="">Todos</option>';
+            proveedores.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                selectProveedor.appendChild(option);
+            });
+        }
+
+        // Filtrar por estado (desde KPIs)
+        function filterByStatus(status) {
+            document.getElementById('filterStatus').value = status;
+            applyFilters();
+        }
+
+        // Aplicar filtros
+        function applyFilters() {
+            const status = document.getElementById('filterStatus').value;
+            const proveedor = document.getElementById('filterProveedor').value;
+            const transporte = document.getElementById('filterTransporte').value;
+            const searchOC = document.getElementById('searchOC').value.toLowerCase();
+            const searchSKU = document.getElementById('searchSKU').value.toLowerCase().trim();
+
+            filteredData = allData.filter(d => {
+                if (status && d.estado_grupo !== status) return false;
+                if (proveedor && d.Proveedor !== proveedor) return false;
+                if (transporte && d.Transporte !== transporte) return false;
+                if (searchOC && !String(d.Num_OC).toLowerCase().includes(searchOC)) return false;
+                if (searchSKU) {
+                    const tieneSKU = d.Items && d.Items.some(item =>
+                        String(item.SKU).toLowerCase().includes(searchSKU) ||
+                        (item.Descripcion && item.Descripcion.toLowerCase().includes(searchSKU))
+                    );
+                    if (!tieneSKU) return false;
+                }
+                return true;
+            });
+
+            renderTables();
+        }
+
+        // Resetear filtros
+        function resetFilters() {
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterProveedor').value = '';
+            document.getElementById('filterTransporte').value = '';
+            document.getElementById('searchOC').value = '';
+            document.getElementById('searchSKU').value = '';
+            filteredData = [...allData];
+            renderTables();
+        }
+
+        // Variables globales para instancias de charts
+        let statusChartInstance = null;
+        let difotChartInstance = null;
+
+        // Renderizar gráficos
+        function renderCharts() {
+            const kpis = dashboardData.kpis;
+
+            // Destruir charts existentes antes de recrear
+            if (statusChartInstance) {
+                statusChartInstance.destroy();
+                statusChartInstance = null;
+            }
+            if (difotChartInstance) {
+                difotChartInstance.destroy();
+                difotChartInstance = null;
+            }
+
+            // Gráfico de estado
+            const ctx1 = document.getElementById('statusChart').getContext('2d');
+            statusChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Atrasados', 'Próximos 7d', 'En tiempo', 'En preparación'],
+                    datasets: [{
+                        data: [kpis.atrasados, kpis.proximos_7d, kpis.en_tiempo, kpis.sin_eta],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico DIFOT
+            const ctx2 = document.getElementById('difotChart').getContext('2d');
+            const totalConETA = kpis.atrasados + kpis.proximos_7d + kpis.en_tiempo;
+            const difot = totalConETA > 0 ? ((kpis.sin_desviacion / totalConETA) * 100).toFixed(1) : 0;
+            
+            difotChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['DIFOT', 'Con Desviación', 'En Tiempo'],
+                    datasets: [{
+                        label: 'Porcentaje',
+                        data: [difot, ((kpis.con_desviacion / totalConETA) * 100).toFixed(1), ((kpis.sin_desviacion / totalConETA) * 100).toFixed(1)],
+                        backgroundColor: ['#8b5cf6', '#ef4444', '#10b981'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Renderizar tablas
+        function renderTables() {
+            const container = document.getElementById('tablesContainer');
+            
+            const grupos = [
+                { key: 'atrasado', titulo: 'Órdenes Atrasadas', badge: 'danger', icon: '🚨' },
+                { key: 'proximo', titulo: 'Próximas a Llegar (7 días)', badge: 'warning', icon: '⏰' },
+                { key: 'en_tiempo', titulo: 'En Tiempo', badge: 'success', icon: '✅' },
+                { key: 'sin_eta', titulo: 'En Preparación (Sin ETA)', badge: 'info', icon: '📦' }
+            ];
+
+            let html = '';
+
+            grupos.forEach(grupo => {
+                const data = filteredData.filter(d => d.estado_grupo === grupo.key);
+                
+                if (data.length === 0) return;
+
+                html += `
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>
+                                <span class="badge ${grupo.badge}">${grupo.icon} ${grupo.titulo}</span>
+                            </h3>
+                            <span class="record-count">${data.length} registros</span>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>OC</th>
+                                    <th>Proveedor</th>
+                                    <th>Marca</th>
+                                    <th>Fecha OC</th>
+                                    <th class="highlight-col">Fecha Comprometida</th>
+                                    <th class="critical-col">Fecha ETA</th>
+                                    <th class="critical-col">Fecha Est. Bodega</th>
+                                    <th class="highlight-col">LT Pactado</th>
+                                    <th>LT Real</th>
+                                    <th class="highlight-col">Desviación</th>
+                                    <th>Transporte</th>
+                                    ${grupo.key === 'sin_eta' 
+                                        ? '<th>Estado Compromiso</th><th>Días desde OC</th>' 
+                                        : '<th colspan="2">Días Para Bodega</th>'}
+                                    <th>Líneas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                data.forEach(row => {
+                    const desviacion = row.Desviacion !== null ? row.Desviacion : '-';
+                    const desviacionClass = desviacion === '-' ? 'deviation-negative' : 
+                                          (row.Desviacion > 0 ? 'deviation-positive' : 'deviation-neutral');
+                    const desviacionText = desviacion !== '-' ? 
+                                          (row.Desviacion > 0 ? `+${row.Desviacion}d` : `${row.Desviacion}d`) : '-';
+
+                    // Calcular fecha estimada bodega (ETA + 8 días)
+                    const fechaBodega = row.Fecha_Est_Bodega || (row.Fecha_ETA ? addDays(row.Fecha_ETA, 8) : null);
+                    const fechaBodegaStr = fechaBodega ? formatDate(fechaBodega) : '-';
+
+                    // Para OCs en preparación, mostrar estado del compromiso
+                    let estadoCompromiso = '';
+                    let diasDesdeOC = '';
+                    let diasParaBodega = '';
+
+                    if (grupo.key === 'sin_eta') {
+                        const hoy = new Date();
+                        const diasVencimiento = row.Dias_hasta_comprometida;
+                        diasDesdeOC = Math.abs(daysBetween(row.Fecha_OC, hoy)) + 'd';
+                        
+                        if (diasVencimiento < 0) {
+                            estadoCompromiso = `<span style="color: #dc2626; font-weight: 600;">Vencida (${Math.abs(diasVencimiento)}d)</span>`;
+                        } else if (diasVencimiento <= 7) {
+                            estadoCompromiso = `<span style="color: #f59e0b; font-weight: 600;">Por vencer (${diasVencimiento}d)</span>`;
+                        } else {
+                            estadoCompromiso = `<span style="color: #059669; font-weight: 600;">Vigente (${diasVencimiento}d)</span>`;
+                        }
+                    } else {
+                        // Para OCs con ETA, calcular días hasta bodega
+                        if (fechaBodega) {
+                            const hoy = new Date();
+                            const diasCalc = daysBetween(hoy, fechaBodega);
+                            diasParaBodega = Math.abs(diasCalc) + 'd';
+                        }
+                    }
+
+                    if (grupo.key === 'sin_eta') {
+                        html += `
+                            <tr class="clickable-oc" onclick="openModal(${row.Num_OC})" style="cursor: pointer;" title="Click para ver detalle de ítems">
+                                <td><strong>${row.Num_OC}</strong></td>
+                                <td>${row.Proveedor}</td>
+                                <td>${row.Marca}</td>
+                                <td>${formatDate(row.Fecha_OC)}</td>
+                                <td class="highlight-col">${formatDate(row.Fecha_Comprometida)}</td>
+                                <td class="critical-col">En preparación</td>
+                                <td class="critical-col">-</td>
+                                <td class="highlight-col"><strong>${row.LT_Pactado}d</strong></td>
+                                <td>-</td>
+                                <td class="highlight-col">-</td>
+                                <td>${row.Transporte}</td>
+                                <td>${estadoCompromiso}</td>
+                                <td>${diasDesdeOC}</td>
+                                <td>${row.Lineas}</td>
+                            </tr>
+                        `;
+                    } else {
+                        html += `
+                            <tr class="clickable-oc" onclick="openModal(${row.Num_OC})" style="cursor: pointer;" title="Click para ver detalle de ítems">
+                                <td><strong>${row.Num_OC}</strong></td>
+                                <td>${row.Proveedor}</td>
+                                <td>${row.Marca}</td>
+                                <td>${formatDate(row.Fecha_OC)}</td>
+                                <td class="highlight-col">${formatDate(row.Fecha_Comprometida)}</td>
+                                <td class="critical-col">${formatDate(row.Fecha_ETA)}</td>
+                                <td class="critical-col"><strong>${fechaBodegaStr}</strong></td>
+                                <td class="highlight-col"><strong>${row.LT_Pactado}d</strong></td>
+                                <td>${row.LT_Real !== null ? row.LT_Real + 'd' : '-'}</td>
+                                <td class="highlight-col ${desviacionClass}">${desviacionText}</td>
+                                <td>${row.Transporte}</td>
+                                <td colspan="2">${diasParaBodega}</td>
+                                <td>${row.Lineas}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+
+            if (html === '') {
+                html = '<div class="table-card"><p class="no-data">No hay datos que coincidan con los filtros seleccionados</p></div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        
+        // DEBUG: Verificar que datos existan antes de inicializar
+        console.log('=== DASHBOARD DEBUG ===');
+        if (typeof dashboardData === 'undefined') {
+            console.error('ERROR: dashboardData NO está definido');
+            alert('Error: No se pudieron cargar los datos del dashboard. Por favor, intente abrir el archivo nuevamente.');
+        } else {
+            console.log('✓ dashboardData está definido');
+            console.log('  Total OCs:', dashboardData.kpis.total_ocs);
+            console.log('  Atrasados:', dashboardData.kpis.atrasados);
+            console.log('  Próximos 7d:', dashboardData.kpis.proximos_7d);
+            console.log('  En tiempo:', dashboardData.kpis.en_tiempo);
+            console.log('  Sin ETA:', dashboardData.kpis.sin_eta);
+        }
+        
+
+        
+        // Función para procesar archivo Excel cargado
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validar tipo de archivo
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                alert('❌ Error: Por favor selecciona un archivo Excel (.xlsx o .xls)');
+                event.target.value = '';
+                return;
+            }
+            
+            // Validar tamaño (máximo 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('❌ Error: El archivo es muy grande. Máximo 10MB.');
+                event.target.value = '';
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('uploadStatus').textContent = 'Procesando...';
+            
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data);
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                console.log('Datos leídos:', jsonData.length, 'filas');
+                
+                // Procesar los datos
+                const processedData = processExcelData(jsonData);
+                
+                // Actualizar dashboardData global
+                dashboardData.kpis = processedData.kpis;
+                dashboardData.atrasados = processedData.atrasados;
+                dashboardData.proximos = processedData.proximos;
+                dashboardData.enTiempo = processedData.enTiempo;
+                dashboardData.sinETA = processedData.sinETA;
+                
+                // Guardar en localStorage para persistir entre sesiones
+                try {
+                    const saveData = {
+                        kpis: processedData.kpis,
+                        atrasados: processedData.atrasados,
+                        proximos: processedData.proximos,
+                        enTiempo: processedData.enTiempo,
+                        sinETA: processedData.sinETA,
+                        fileName: file.name,
+                        savedAt: new Date().toLocaleString('es-CL')
+                    };
+                    localStorage.setItem('comex_dashboard_data', JSON.stringify(saveData));
+                    console.log('✅ Datos guardados en localStorage');
+                } catch(e) {
+                    console.warn('No se pudo guardar en localStorage:', e);
+                }
+
+                // Reinicializar dashboard
+                initDashboard();
+                
+                // Actualizar status
+                document.getElementById('uploadStatus').textContent = `✓ ${file.name}`;
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
+                alert(`✓ Dashboard actualizado exitosamente!\n\n${processedData.kpis.total_ocs} OCs procesadas`);
+                
+            } catch (error) {
+                console.error('Error procesando archivo:', error);
+                console.error('Stack:', error.stack);
+                
+                let errorMsg = 'Error al procesar el archivo.\n\n';
+                errorMsg += 'Error: ' + error.message + '\n\n';
+                errorMsg += 'Verifica que el archivo Excel tenga las siguientes columnas:\n';
+                errorMsg += '- Num OC\n';
+                errorMsg += '- Proveedor\n';
+                errorMsg += '- Fecha emision OC\n';
+                errorMsg += '- Fecha comprometida\n';
+                errorMsg += '- Fecha ETA\n';
+                errorMsg += '- SKU\n';
+                errorMsg += '- Descripción SKU\n';
+                errorMsg += '- Cantidad\n';
+                errorMsg += '- Marca\n';
+                
+                alert(errorMsg);
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('uploadStatus').textContent = '❌ Error';
+            }
+        }
+        
+        // Función para procesar datos del Excel
+        function processExcelData(data) {
+            const fecha_actual = new Date(); fecha_actual.setHours(0,0,0,0);
+            
+            console.log('📊 Procesando', data.length, 'filas');
+            
+            if (data.length === 0) {
+                throw new Error('El archivo está vacío');
+            }
+            
+            // Detectar automáticamente los nombres de las columnas
+            const firstRow = data[0];
+            const columns = Object.keys(firstRow);
+            
+            console.log('📋 Columnas detectadas:', columns);
+            
+            // Función para encontrar una columna por palabras clave
+            const findColumn = (keywords) => {
+                for (let col of columns) {
+                    const colLower = col.toLowerCase().trim();
+                    for (let keyword of keywords) {
+                        if (colLower.includes(keyword.toLowerCase())) {
+                            return col;
+                        }
+                    }
+                }
+                return null;
+            };
+            
+            // Detectar columnas automáticamente (orden importa: keywords más específicas primero)
+            const colEstadoOC = findColumn(['estado oc']);
+            const colFechaBodega = findColumn(['fecha estimada bodega', 'estimada bodega', 'bodega']);
+            const colOC = findColumn(['num oc', 'numero oc', 'nro oc']);
+            const colProveedor = findColumn(['proveedor', 'supplier']);
+            const colMarca = findColumn(['marca', 'brand']);
+            const colFechaOC = findColumn(['fecha emision', 'emision oc']);
+            const colFechaComp = findColumn(['fecha comprometida', 'comprometida', 'committed']);
+            const colFechaETA = findColumn(['fecha eta']);
+            const colTransporte = findColumn(['transporte', 'transport']);
+            const colEmbarcador = findColumn(['embarcador', 'shipper']);
+            const colSKU = findColumn(['sku']);
+            const colDescripcion = findColumn(['descripción', 'descripcion', 'description']);
+            const colCantidad = findColumn(['cantidad', 'cant', 'quantity']);
+            
+            console.log('✅ Columnas mapeadas:');
+            console.log('  OC:', colOC);
+            console.log('  Proveedor:', colProveedor);
+            console.log('  Fecha OC:', colFechaOC);
+            console.log('  Fecha Comprometida:', colFechaComp);
+            console.log('  Fecha ETA:', colFechaETA);
+            console.log('  SKU:', colSKU);
+            
+            if (!colOC) {
+                throw new Error('No se encontró la columna de OC. Columnas disponibles: ' + columns.join(', '));
+            }
+            
+            // Agrupar por OC
+            const ocsMap = {};
+            
+            data.forEach((row, index) => {
+                const numOC = row[colOC];
+                if (!numOC) return;
+                
+                if (!ocsMap[numOC]) {
+                    // Convertir fechas
+                    const fechaOC = colFechaOC && row[colFechaOC] ? excelDateToJSDate(row[colFechaOC]) : null;
+                    let fechaComp = colFechaComp && row[colFechaComp] ? excelDateToJSDate(row[colFechaComp]) : null;
+                    let fechaETA = colFechaETA && row[colFechaETA] ? excelDateToJSDate(row[colFechaETA]) : null;
+                    
+                    // Calcular métricas
+                    const ltPactado = fechaComp && fechaOC ? Math.floor((fechaComp - fechaOC) / (1000*60*60*24)) : 0;
+                    const ltReal = fechaETA && fechaOC ? Math.floor((fechaETA - fechaOC) / (1000*60*60*24)) : null;
+                    const desviacion = ltReal !== null ? ltReal - ltPactado : null;
+                    
+                    // Clasificar estado: usar Estado OC del Excel como fuente principal
+                    const estadoExcel = colEstadoOC ? (row[colEstadoOC] || '').toString().toLowerCase().trim() : '';
+                    let estado = 'Sin ETA';
+                    if (estadoExcel.includes('atrasado') || /^[2-6]\./.test(estadoExcel)) {
+                        estado = 'Atrasado';
+                    } else if (estadoExcel.startsWith('1.') || estadoExcel.includes('a tiempo') || estadoExcel.includes('tiempo')) {
+                        if (fechaETA && (fechaETA - fecha_actual) / (1000*60*60*24) <= 7) {
+                            estado = 'Próximo 7 días';
+                        } else if (fechaETA) {
+                            estado = 'En tiempo';
+                        } else {
+                            estado = 'Sin ETA';
+                        }
+                    } else if (fechaETA) {
+                        if ((fechaETA - fecha_actual) / (1000*60*60*24) <= 7) {
+                            estado = 'Próximo 7 días';
+                        } else if (fechaETA >= fecha_actual) {
+                            estado = 'En tiempo';
+                        } else {
+                            estado = 'Atrasado';
+                        }
+                    }
+                    
+                    // Fecha estimada bodega: usar directamente del Excel si existe
+                    const fechaBodegaExcel = colFechaBodega && row[colFechaBodega] ? excelDateToJSDate(row[colFechaBodega]) : null;
+
+                    ocsMap[numOC] = {
+                        Num_OC: numOC,
+                        Proveedor: colProveedor ? (row[colProveedor] || '').toString().trim() : '',
+                        Marca: colMarca ? (row[colMarca] || '') : '',
+                        Fecha_OC: fechaOC ? fechaOC.toISOString().split('T')[0] : null,
+                        Fecha_Comprometida: fechaComp ? fechaComp.toISOString().split('T')[0] : null,
+                        Fecha_ETA: fechaETA ? fechaETA.toISOString().split('T')[0] : null,
+                        Fecha_Est_Bodega: fechaBodegaExcel ? fechaBodegaExcel.toISOString().split('T')[0] : null,
+                        Transporte: colTransporte ? (row[colTransporte] || '') : '',
+                        Embarcador: colEmbarcador ? (row[colEmbarcador] || '') : '',
+                        LT_Pactado: ltPactado,
+                        LT_Real: ltReal,
+                        Desviacion: desviacion,
+                        Dias_hasta_comprometida: fechaComp ? Math.floor((fechaComp - fecha_actual) / (1000*60*60*24)) : 0,
+                        Dias_hasta_ETA: fechaETA ? Math.floor((fechaETA - fecha_actual) / (1000*60*60*24)) : null,
+                        Estado_Calculado: estado,
+                        Estado_OC: colEstadoOC ? (row[colEstadoOC] || '') : '',
+                        Lineas: 0,
+                        Items: []
+                    };
+                }
+                
+                // Agregar item
+                ocsMap[numOC].Items.push({
+                    SKU: colSKU ? (row[colSKU] || 0) : 0,
+                    Descripcion: colDescripcion ? (row[colDescripcion] || '') : '',
+                    Cantidad: colCantidad ? (row[colCantidad] || 0) : 0,
+                    Marca: colMarca ? (row[colMarca] || '') : ''
+                });
+                ocsMap[numOC].Lineas++;
+            });
+            
+            // Convertir a arrays por estado
+            const ocs = Object.values(ocsMap);
+            const atrasados = ocs.filter(oc => oc.Estado_Calculado === 'Atrasado');
+            const proximos = ocs.filter(oc => oc.Estado_Calculado === 'Próximo 7 días');
+            const enTiempo = ocs.filter(oc => oc.Estado_Calculado === 'En tiempo');
+            const sinETA = ocs.filter(oc => oc.Estado_Calculado === 'Sin ETA');
+            
+            // Calcular KPIs
+            const ocsConETA = ocs.filter(oc => oc.Fecha_ETA);
+            const conDesviacion = ocsConETA.filter(oc => oc.Desviacion > 0);
+            const sinDesviacion = ocsConETA.filter(oc => oc.Desviacion <= 0);
+            const desviacionProm = conDesviacion.length > 0 
+                ? conDesviacion.reduce((sum, oc) => sum + oc.Desviacion, 0) / conDesviacion.length 
+                : 0;
+            
+            console.log('✅ Procesamiento completado:');
+            console.log('  Total OCs:', ocs.length);
+            console.log('  Atrasados:', atrasados.length);
+            console.log('  Próximos 7d:', proximos.length);
+            console.log('  En tiempo:', enTiempo.length);
+            console.log('  Sin ETA:', sinETA.length);
+            
+            return {
+                kpis: {
+                    total_ocs: ocs.length,
+                    sin_eta: sinETA.length,
+                    atrasados: atrasados.length,
+                    proximos_7d: proximos.length,
+                    en_tiempo: enTiempo.length,
+                    con_desviacion: conDesviacion.length,
+                    sin_desviacion: sinDesviacion.length,
+                    desviacion_promedio: desviacionProm
+                },
+                atrasados,
+                proximos,
+                enTiempo,
+                sinETA
+            };
+        }
+
+        // Función para convertir fechas de Excel a JavaScript
+        function excelDateToJSDate(excelDate) {
+            if (!excelDate) return null;
+            
+            // Si ya es un objeto Date
+            if (excelDate instanceof Date) {
+                return excelDate;
+            }
+            
+            // Si es string de fecha
+            if (typeof excelDate === 'string') {
+                // Intentar parsear diferentes formatos
+                let parsed = new Date(excelDate);
+                if (!isNaN(parsed.getTime())) return parsed;
+                
+                // Intentar formato DD-MM-YYYY
+                const parts = excelDate.split(/[-/]/);
+                if (parts.length === 3) {
+                    const d = parseInt(parts[0]);
+                    const m = parseInt(parts[1]) - 1;
+                    const y = parseInt(parts[2]);
+                    if (y > 1900 && m >= 0 && m < 12 && d > 0 && d <= 31) {
+                        return new Date(y, m, d);
+                    }
+                }
+                return null;
+            }
+            
+            // Si es número de Excel (días desde 1900-01-01)
+            if (typeof excelDate === 'number') {
+                // Excel fecha: 1 = 1900-01-01
+                const excelEpoch = new Date(1900, 0, 1);
+                const days = Math.floor(excelDate) - 2; // -2 para compensar bug de Excel
+                return new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+            }
+            
+            return null;
+        }
+
+
+        // Funciones del modal
+        function openModal(numOC) {
+            console.log('Abriendo modal para OC:', numOC);
+            
+            // Buscar la OC en todos los datos
+            let ocData = null;
+            const allData = [
+                ...dashboardData.atrasados,
+                ...dashboardData.proximos,
+                ...dashboardData.enTiempo,
+                ...dashboardData.sinETA
+            ];
+            
+            ocData = allData.find(oc => oc.Num_OC === numOC);
+            
+            if (!ocData) {
+                console.error('No se encontró la OC:', numOC);
+                return;
+            }
+            
+            console.log('Datos de OC encontrados:', ocData);
+            
+            // Actualizar título
+            document.getElementById('modalTitle').textContent = `OC ${numOC} - ${ocData.Proveedor}`;
+            
+            // Crear contenido del modal
+            let html = `
+                <div class="oc-info">
+                    <div class="oc-info-item">
+                        <span class="oc-info-label">Proveedor</span>
+                        <span class="oc-info-value">${ocData.Proveedor}</span>
+                    </div>
+                    <div class="oc-info-item">
+                        <span class="oc-info-label">Fecha OC</span>
+                        <span class="oc-info-value">${formatDate(ocData.Fecha_OC)}</span>
+                    </div>
+                    <div class="oc-info-item">
+                        <span class="oc-info-label">Fecha Comprometida</span>
+                        <span class="oc-info-value">${formatDate(ocData.Fecha_Comprometida)}</span>
+                    </div>
+                    <div class="oc-info-item">
+                        <span class="oc-info-label">Fecha ETA</span>
+                        <span class="oc-info-value">${formatDate(ocData.Fecha_ETA)}</span>
+                    </div>
+                    <div class="oc-info-item">
+                        <span class="oc-info-label">Transporte</span>
+                        <span class="oc-info-value">${ocData.Transporte}</span>
+                    </div>
+                    <div class="oc-info-item">
+                        <span class="oc-info-label">Estado</span>
+                        <span class="oc-info-value">${ocData.Estado_Calculado}</span>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 20px; margin-bottom: 15px; color: #E31E24; font-size: 16px;">
+                    📦 Items de la OC (${ocData.Lineas} líneas)
+                </h3>
+                
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Descripción</th>
+                            <th>Marca</th>
+                            <th style="text-align: right;">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Agregar items
+            ocData.Items.forEach((item, index) => {
+                html += `
+                    <tr>
+                        <td><strong>${item.SKU}</strong></td>
+                        <td>${item.Descripcion}</td>
+                        <td>${item.Marca}</td>
+                        <td style="text-align: right;"><strong>${item.Cantidad.toLocaleString()}</strong></td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('itemsModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('itemsModal').style.display = 'none';
+        }
+        
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('itemsModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+
+        // Al cargar la página, intentar restaurar datos guardados
+        function loadSavedData() {
+            try {
+                const saved = localStorage.getItem('comex_dashboard_data');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    dashboardData.kpis = data.kpis;
+                    dashboardData.atrasados = data.atrasados;
+                    dashboardData.proximos = data.proximos;
+                    dashboardData.enTiempo = data.enTiempo;
+                    dashboardData.sinETA = data.sinETA;
+
+                    // Mostrar badge con info del último archivo cargado
+                    const statusEl = document.getElementById('uploadStatus');
+                    if (statusEl && data.fileName) {
+                        statusEl.textContent = `✓ ${data.fileName}`;
+                    }
+
+                    // Mostrar banner de datos restaurados
+                    const banner = document.getElementById('savedDataBanner');
+                    if (banner && data.savedAt) {
+                        banner.textContent = `📂 Datos del: ${data.savedAt} — ${data.kpis.total_ocs} OCs`;
+                        banner.style.display = 'block';
+                    }
+
+                    console.log('✅ Datos restaurados desde localStorage:', data.savedAt);
+                    return true;
+                }
+            } catch(e) {
+                console.warn('No se pudieron restaurar datos:', e);
+            }
+            return false;
+        }
+
+        // Inicializar al cargar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => { loadSavedData(); initDashboard(); });
+        } else {
+            loadSavedData();
+            initDashboard();
+        }
+    </script>
+
+    <noscript>
+        <div style="padding: 50px; text-align: center; background: white;">
+            <h1 style="color: #E31E24;">⚠️ JavaScript Deshabilitado</h1>
+            <p>Por favor, habilite JavaScript en su navegador para ver el dashboard.</p>
+        </div>
+    </noscript>
+
+    <!-- Botón de carga de archivo -->
+    <div class="upload-container" title="Actualizar datos desde Excel">
+        <label for="fileUpload">
+            📂
+            <input type="file" id="fileUpload" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+        </label>
+        <span class="upload-status" id="uploadStatus"></span>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h3>Procesando archivo...</h3>
+            <p>Leyendo y actualizando datos</p>
+        </div>
+    </div>
+
+    <!-- Modal para detalle de items -->
+    <div id="itemsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Detalle de OC</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Contenido se carga dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+</body>
+<script>
+    if ('serviceWorker' in navigator) {
+        // SW inline como blob para que funcione desde archivo local
+        const swCode = `
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => clients.claim());
+self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+`;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(() => {});
+    }
+</script>
+</html>
