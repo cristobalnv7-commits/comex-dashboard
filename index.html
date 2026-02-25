@@ -1483,7 +1483,51 @@
             100% { transform: rotate(360deg); }
         }
 
+        .export-container {
+            position: fixed;
+            bottom: 30px;
+            right: 166px;
+            z-index: 1000;
+        }
+
+        .export-container button {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1a7a4a;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50px;
+            font-size: 22px;
+            box-shadow: 0 4px 15px rgba(26, 122, 74, 0.4);
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .export-container button:hover {
+            background: #145e38;
+            box-shadow: 0 6px 20px rgba(26, 122, 74, 0.6);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 900px) {
+            .export-container {
+                bottom: 20px;
+                right: 140px;
+            }
+            .export-container button {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
         @media print {
+            .export-container {
+                display: none !important;
+            }
             .upload-container {
                 display: none !important;
             }
@@ -1623,6 +1667,11 @@
         <button class="print-button" onclick="window.print()" title="Imprimir / Guardar PDF">
             🖨️
         </button>
+
+        <!-- Botón exportar Excel flotante -->
+        <div class="export-container" title="Exportar OCs a Excel">
+            <button onclick="exportarExcel()">📊</button>
+        </div>
     </div>
 
     <script>
@@ -5241,7 +5290,144 @@
 </script>
 
 <script>
-    if ('serviceWorker' in navigator) {
+    function exportarExcel() {
+        try {
+            const wb = XLSX.utils.book_new();
+
+            // Columnas a exportar (campos del OC sin Items)
+            const cols = [
+                'Num_OC', 'Proveedor', 'Marca', 'Fecha_OC',
+                'Fecha_Comprometida', 'Fecha_ETA', 'Transporte', 'Embarcador',
+                'LT_Pactado', 'LT_Real', 'Desviacion',
+                'Dias_hasta_comprometida', 'Dias_hasta_ETA',
+                'Estado_Calculado', 'Estado_OC', 'Lineas'
+            ];
+
+            const headers = {
+                Num_OC: 'N° OC',
+                Proveedor: 'Proveedor',
+                Marca: 'Marca',
+                Fecha_OC: 'Fecha OC',
+                Fecha_Comprometida: 'Fecha Comprometida',
+                Fecha_ETA: 'Fecha ETA',
+                Transporte: 'Transporte',
+                Embarcador: 'Embarcador',
+                LT_Pactado: 'LT Pactado',
+                LT_Real: 'LT Real',
+                Desviacion: 'Desviación',
+                Dias_hasta_comprometida: 'Días hasta Comprometida',
+                Dias_hasta_ETA: 'Días hasta ETA',
+                Estado_Calculado: 'Estado Calculado',
+                Estado_OC: 'Estado OC',
+                Lineas: 'Líneas'
+            };
+
+            function ocToRow(oc) {
+                const row = {};
+                cols.forEach(c => { row[headers[c]] = oc[c] !== undefined ? oc[c] : ''; });
+                return row;
+            }
+
+            // Hoja resumen con todas las OCs
+            const allOCs = [
+                ...dashboardData.atrasados.map(d => ({...d, estado_grupo: 'Atrasado'})),
+                ...dashboardData.proximos.map(d => ({...d, estado_grupo: 'Próximo 7 días'})),
+                ...dashboardData.enTiempo.map(d => ({...d, estado_grupo: 'En Tiempo'})),
+                ...dashboardData.sinETA.map(d => ({...d, estado_grupo: 'Sin ETA / En Preparación'}))
+            ];
+
+            const resumenCols = ['estado_grupo', ...cols];
+            const resumenHeaders = { estado_grupo: 'Grupo Estado', ...headers };
+            const resumenRows = allOCs.map(oc => {
+                const row = {};
+                resumenCols.forEach(c => { row[resumenHeaders[c]] = oc[c] !== undefined ? oc[c] : ''; });
+                return row;
+            });
+
+            const wsResumen = XLSX.utils.json_to_sheet(resumenRows);
+            // Ancho de columnas
+            wsResumen['!cols'] = resumenCols.map(c => ({ wch: c === 'Proveedor' || c === 'estado_grupo' ? 30 : 18 }));
+            XLSX.utils.book_append_sheet(wb, wsResumen, 'Todas las OCs');
+
+            // Hojas individuales por estado
+            const grupos = [
+                { key: 'atrasados', nombre: 'Atrasados' },
+                { key: 'proximos', nombre: 'Próximos 7 días' },
+                { key: 'enTiempo', nombre: 'En Tiempo' },
+                { key: 'sinETA', nombre: 'Sin ETA' }
+            ];
+
+            grupos.forEach(({ key, nombre }) => {
+                const data = dashboardData[key];
+                if (!data || data.length === 0) {
+                    // Hoja vacía con headers
+                    const ws = XLSX.utils.json_to_sheet([cols.reduce((acc, c) => { acc[headers[c]] = ''; return acc; }, {})]);
+                    ws['!cols'] = cols.map(c => ({ wch: c === 'Proveedor' ? 30 : 18 }));
+                    XLSX.utils.book_append_sheet(wb, ws, nombre);
+                    return;
+                }
+                const rows = data.map(ocToRow);
+                const ws = XLSX.utils.json_to_sheet(rows);
+                ws['!cols'] = cols.map(c => ({ wch: c === 'Proveedor' ? 30 : 18 }));
+                XLSX.utils.book_append_sheet(wb, ws, nombre);
+            });
+
+            // Hoja de detalle de Items
+            const itemRows = [];
+            allOCs.forEach(oc => {
+                if (oc.Items && oc.Items.length > 0) {
+                    oc.Items.forEach(item => {
+                        itemRows.push({
+                            'N° OC': oc.Num_OC,
+                            'Proveedor': oc.Proveedor,
+                            'Estado': oc.Estado_Calculado || oc.estado_grupo || '',
+                            'SKU': item.SKU,
+                            'Descripción': item.Descripcion,
+                            'Cantidad': item.Cantidad,
+                            'Marca': item.Marca
+                        });
+                    });
+                }
+            });
+
+            if (itemRows.length > 0) {
+                const wsItems = XLSX.utils.json_to_sheet(itemRows);
+                wsItems['!cols'] = [
+                    { wch: 14 }, { wch: 30 }, { wch: 20 },
+                    { wch: 12 }, { wch: 50 }, { wch: 12 }, { wch: 18 }
+                ];
+                XLSX.utils.book_append_sheet(wb, wsItems, 'Detalle Items');
+            }
+
+            // Hoja KPIs
+            const kpis = dashboardData.kpis;
+            const kpiRows = [
+                { 'Indicador': 'Total OCs', 'Valor': kpis.total_ocs },
+                { 'Indicador': 'Atrasados', 'Valor': kpis.atrasados },
+                { 'Indicador': 'Próximos 7 días', 'Valor': kpis.proximos_7d },
+                { 'Indicador': 'En Tiempo', 'Valor': kpis.en_tiempo },
+                { 'Indicador': 'Sin ETA / En Preparación', 'Valor': kpis.sin_eta },
+                { 'Indicador': 'Con Desviación', 'Valor': kpis.con_desviacion },
+                { 'Indicador': 'Sin Desviación', 'Valor': kpis.sin_desviacion },
+                { 'Indicador': 'Desviación Promedio (días)', 'Valor': kpis.desviacion_promedio }
+            ];
+            const wsKpis = XLSX.utils.json_to_sheet(kpiRows);
+            wsKpis['!cols'] = [{ wch: 30 }, { wch: 12 }];
+            XLSX.utils.book_append_sheet(wb, wsKpis, 'KPIs');
+
+            // Generar nombre con fecha
+            const hoy = new Date();
+            const fecha = `${hoy.getFullYear()}${String(hoy.getMonth()+1).padStart(2,'0')}${String(hoy.getDate()).padStart(2,'0')}`;
+            XLSX.writeFile(wb, `COMEX_OCs_${fecha}.xlsx`);
+
+        } catch (e) {
+            console.error('Error al exportar:', e);
+            alert('❌ Error al generar el Excel: ' + e.message);
+        }
+    }
+</script>
+
+<script>
         // SW inline como blob para que funcione desde archivo local
         const swCode = `
 self.addEventListener('install', e => self.skipWaiting());
